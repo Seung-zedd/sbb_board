@@ -2,7 +2,6 @@
 spring:
   thymeleaf:
     cache: false
-    prefix: src/main/resources/templates/ # jar 배포시에는 spring.thymeleaf.prefix 항목을 주석처리
   # H2 설정
   h2:
     console:
