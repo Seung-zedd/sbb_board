@@ -13,10 +13,10 @@ public class AnswerService {
 
     public void create(Question question, String content) {
         Answer answer = new Answer();
-
         answer.setQuestion(question);
         answer.setCreateDate(LocalDateTime.now());
         answer.setContent(content);
+
         answerRepository.save(answer);
     }
 }
