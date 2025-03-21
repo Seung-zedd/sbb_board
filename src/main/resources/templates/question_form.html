@@ -1,7 +1,17 @@
 <html layout:decorate="~{layout}" xmlns:layout="http://www.w3.org/1999/xhtml">
 <div layout:fragment="content" class="container">
     <h5 class="my-3 border-bottom pb-2">질문 등록</h5>
-    <form th:action="@{/question/create}" method="post">
+    <form th:action="@{/question/create}" th:object="${questionForm}" method="post">
+        <div class="alert alert-danger" role="alert" th:if="${#fields.hasAnyErrors()}">
+            <!-- Show global errors if they exist -->
+            <div th:if="${#fields.hasGlobalErrors()}">
+                <div th:each="err : ${#fields.globalErrors()}" th:text="${err}"/>
+            </div>
+            <!-- Show field errors only if no global errors exist -->
+            <div th:unless="${#fields.hasGlobalErrors()}">
+                <div th:each="err : ${#fields.allErrors()}" th:text="${err}"/>
+            </div>
+        </div>
         <div class="mb-3">
             <label for="subject" class="form-label">제목</label> <input type="text" name="subject" id="subject"
                                                                       class="form-control">
