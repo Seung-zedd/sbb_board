@@ -1,5 +1,6 @@
 package com.mysite.sbb.question;
 
+import com.mysite.sbb.answer.AnswerForm;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,7 @@ public class QuestionController {
     }
 
     @GetMapping("/detail/{id}")
-    public String detail(Model model, @PathVariable("id") Long id) {
+    public String detail(Model model, @PathVariable("id") Long id, AnswerForm answerForm) {
         Question question = questionService.getQuestion(id);
         model.addAttribute("question", question);
         return "question_detail";
@@ -42,10 +43,10 @@ public class QuestionController {
     @PostMapping("/create")
     public String createQuestion(@Valid QuestionForm questionForm, BindingResult bindingResult) {
         // 사용자가 제목, 내용 둘 다 입력하지 않았을 경우
-        if ((questionForm.getSubject() == null || questionForm.getSubject().trim().isEmpty()) && (questionForm.getContent() == null || questionForm.getContent().trim().isEmpty())) {
+        if (bindingResult.hasFieldErrors("subject") && bindingResult.hasFieldErrors("content")) {
             // Add a global error instead of field errors
             bindingResult.reject("bothFieldsEmpty", "제목과 내용을 입력해주세요.");
-            log.error("사용자가 제목과 내용 모두 입력하지 않음");
+            log.error("사용자가 제목과 내용 모두 입력하지 않음: {}", bindingResult.getGlobalErrors());
             return "question_form";
         }
 
