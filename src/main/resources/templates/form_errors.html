@@ -1,0 +1,11 @@
+<div th:fragment="formErrorsFragment" class="alert alert-danger"
+     role="alert" th:if="${#fields.hasAnyErrors()}">
+    <!-- Show global errors if they exist -->
+    <div th:if="${#fields.hasGlobalErrors()}">
+        <div th:each="err : ${#fields.globalErrors()}" th:text="${err}"/>
+    </div>
+    <!-- Show field errors only if no global errors exist -->
+    <div th:unless="${#fields.hasGlobalErrors()}">
+        <div th:each="err : ${#fields.allErrors()}" th:text="${err}"/>
+    </div>
+</div>
