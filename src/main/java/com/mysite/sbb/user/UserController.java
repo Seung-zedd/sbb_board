@@ -3,6 +3,7 @@ package com.mysite.sbb.user;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,12 +36,25 @@ public class UserController {
             return "signup_form";
         }
 
+        // 비밀번호와 비밀번호 확인이 서로 일치하지 않은 경우
         if (!userCreateForm.getPassword1().equals(userCreateForm.getPassword2())) {
             bindingResult.rejectValue("password2", "passwordIncorrect", "2개의 패스워드가 일치하지 않습니다");
             return "signup_form";
         }
 
-        userService.create(userCreateForm.getUsername(), userCreateForm.getEmail(), userCreateForm.getPassword1());
+        try {
+            userService.create(userCreateForm.getUsername(), userCreateForm.getEmail(), userCreateForm.getPassword1());
+
+        } catch (DataIntegrityViolationException e) {
+            bindingResult.reject("signupFailed", "이미 등록된 사용자입니다.");
+            log.error("사용자가 중복 회원 가입을 시도: {}", bindingResult.getAllErrors());
+            return "signup_form";
+        } catch (Exception e) {
+            bindingResult.reject("signupFailed", e.getMessage());
+            log.error("그 밖의 다른 예외: {}", bindingResult.getAllErrors());
+            return "signup_form";
+        }
+
 
         return "redirect:/";
     }
