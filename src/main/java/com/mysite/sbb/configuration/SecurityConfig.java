@@ -20,8 +20,11 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests.requestMatchers(new AntPathRequestMatcher("/**")).permitAll())
                 .formLogin(formLogin -> formLogin.loginPage("/user/login")
-                        .defaultSuccessUrl("/") // 로그인에 성공하면 루트로 리다이렉트
-                );
+                        .defaultSuccessUrl("/")) // 로그인에 성공하면 루트로 리다이렉트;
+                .logout(logout -> logout
+                        .logoutRequestMatcher(new AntPathRequestMatcher("/user/logout"))
+                        .logoutSuccessUrl("/")
+                        .invalidateHttpSession(true));
         return http.build();
     }
 
