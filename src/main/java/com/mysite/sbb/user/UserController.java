@@ -54,9 +54,12 @@ public class UserController {
             log.error("그 밖의 다른 예외: {}", bindingResult.getAllErrors());
             return "signup_form";
         }
-
-
         return "redirect:/";
+    }
+
+    @GetMapping("/login")
+    public String login() {
+        return "login_form";
     }
 
 }
