@@ -7,7 +7,7 @@
     <form th:action="@{/user/signup}" th:object="${userCreateForm}" method="post">
         <div th:replace="~{form_errors :: formErrorsFragment}"></div>
         <div class="mb-3">
-            <label for="username" class="form-label">사용자 ID</label> <input type="text" th:field="*{username}" class="form-control">
+            <label for="username" class="form-label">사용자 ID</label> <input type="text" th:field="*{username}" class="form-control" placeholder="3자 이상 25자 이하를 입력해 주세요.">
         </div>
         <div class="mb-3">
             <label for="password1" class="form-label">비밀번호</label> <input type="password" th:field="*{password1}" class="form-control">

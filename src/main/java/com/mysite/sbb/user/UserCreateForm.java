@@ -9,7 +9,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class UserCreateForm {
-    @Size(min = 3, max = 25)
+    @Size(min = 3, max = 25, message = "사용자 ID는 3자 이상 25자 이하로 입력해야 합니다.")
     @NotBlank(message = "사용자ID는 필수항목입니다.")
     private String username;
 

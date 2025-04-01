@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @RequiredArgsConstructor
 @Service
@@ -27,13 +26,7 @@ public class QuestionService {
     }
 
     public Question getQuestion(Long id) {
-        Optional<Question> question = questionRepository.findById(id);
-        if (question.isPresent()) {
-            return question.get();
-        } else {
-            throw new DataNotFoundException("question not found");
-        }
-
+        return questionRepository.findById(id).orElseThrow(() -> new DataNotFoundException("question not found"));
     }
 
     public void create(String subject, String content) {
