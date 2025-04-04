@@ -1,4 +1,4 @@
-#username.form-control::placeholder {
+.form-control::placeholder {
     font-weight: bold;
     opacity: 0.3; /* 투명도를 1로 설정하여 완전히 불투명하게 만듭니다 */
 }
