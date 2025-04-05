@@ -27,4 +27,6 @@ public class Answer {
 
     @ManyToOne
     private SiteUser author; // 사용자 1명이 답변 여러 개 작성
+    private LocalDateTime modifyDate;
+
 }

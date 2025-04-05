@@ -7,11 +7,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
 
@@ -51,6 +53,47 @@ public class QuestionController {
     @PostMapping("/create")
     public String createQuestion(@Valid QuestionForm questionForm, BindingResult bindingResult, Principal principal) {
         // 사용자가 제목, 내용 둘 다 입력하지 않았을 경우
+        String resultPage = handleError(bindingResult);
+        if (resultPage != null) {
+            return resultPage;
+        }
+
+        SiteUser siteUser = userService.getUser(principal.getName());
+        questionService.create(questionForm.getSubject(), questionForm.getContent(), siteUser);
+        return "redirect:/question/list"; // 질문 저장 후 질문목록으로 이동
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/modify/{id}")
+    public String questionModify(QuestionForm questionForm, @PathVariable("id") Long id, Principal principal) {
+        Question question = questionService.getQuestion(id);
+        validateAuthor(principal, question);
+        questionForm.setSubject(question.getSubject());
+        questionForm.setContent(question.getContent());
+        return "question_form";
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/modify/{id}")
+    public String questionModify(@Valid QuestionForm questionForm, BindingResult bindingResult, Principal principal, @PathVariable("id") Long id) {
+        String resultPage = handleError(bindingResult);
+        if (resultPage != null) {
+            return resultPage;
+        }
+
+        Question question = questionService.getQuestion(id);
+        validateAuthor(principal, question);
+        questionService.modify(question, questionForm.getSubject(), questionForm.getContent());
+        return String.format("redirect:/question/detail/%s", id);
+    }
+
+    private void validateAuthor(Principal principal, Question question) {
+        if (!question.getAuthor().getUsername().equals(principal.getName())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정 권한이 없습니다.");
+        }
+    }
+
+    private String handleError(BindingResult bindingResult) {
         if (bindingResult.hasFieldErrors("subject") && bindingResult.hasFieldErrors("content")) {
             // Add a global error instead of field errors
             bindingResult.reject("bothFieldsEmpty", "제목과 내용을 입력해주세요.");
@@ -62,8 +105,7 @@ public class QuestionController {
             log.error("폼 검증 오류: {}", bindingResult.getAllErrors());
             return "question_form";
         }
-        SiteUser siteUser = userService.getUser(principal.getName());
-        questionService.create(questionForm.getSubject(), questionForm.getContent(), siteUser);
-        return "redirect:/question/list"; // 질문 저장 후 질문목록으로 이동
+
+        return null;
     }
 }
