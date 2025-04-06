@@ -60,6 +60,7 @@ public class QuestionController {
 
         SiteUser siteUser = userService.getUser(principal.getName());
         questionService.create(questionForm.getSubject(), questionForm.getContent(), siteUser);
+        log.info("Created question with siteUser: {}, subject: {}, content: {}", siteUser.getUsername(), questionForm.getSubject(), questionForm.getContent());
         return "redirect:/question/list"; // 질문 저장 후 질문목록으로 이동
     }
 
@@ -80,11 +81,23 @@ public class QuestionController {
         if (resultPage != null) {
             return resultPage;
         }
-
         Question question = questionService.getQuestion(id);
         validateAuthor(principal, question);
+
         questionService.modify(question, questionForm.getSubject(), questionForm.getContent());
+        log.info("Modified question with ID: {}, subject: {}, content: {}", question.getId(), question.getSubject(), question.getContent());
         return String.format("redirect:/question/detail/%s", id);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/delete/{id}")
+    public String questionDelete(Principal principal, @PathVariable("id") Long id) {
+        Question question = questionService.getQuestion(id);
+        validateAuthor(principal, question);
+
+        log.info("Deleting question with ID: {}, subject: {}", question.getId(), question.getSubject());
+        questionService.delete(question);
+        return "redirect:/";
     }
 
     private void validateAuthor(Principal principal, Question question) {
