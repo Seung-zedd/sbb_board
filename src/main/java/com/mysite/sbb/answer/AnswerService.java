@@ -1,10 +1,10 @@
 package com.mysite.sbb.answer;
 
+import com.mysite.sbb.DataNotFoundException;
 import com.mysite.sbb.question.Question;
 import com.mysite.sbb.user.SiteUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 
 @RequiredArgsConstructor
@@ -21,4 +21,16 @@ public class AnswerService {
 
         answerRepository.save(answer);
     }
+
+    public Answer getAnswer(Long id) {
+        return answerRepository.findById(id).orElseThrow(() -> new DataNotFoundException("answer not found"));
+    }
+
+    public void modify(Answer answer, String content) {
+        answer.setContent(content);
+        answer.setModifyDate(LocalDateTime.now());
+        answerRepository.save(answer);
+    }
+
+
 }

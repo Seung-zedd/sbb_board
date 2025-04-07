@@ -60,13 +60,13 @@ public class QuestionController {
 
         SiteUser siteUser = userService.getUser(principal.getName());
         questionService.create(questionForm.getSubject(), questionForm.getContent(), siteUser);
-        log.info("Created question with siteUser: {}, subject: {}, content: {}", siteUser.getUsername(), questionForm.getSubject(), questionForm.getContent());
+        log.info("created question with siteUser: {}, subject: {}, content: {}", siteUser.getUsername(), questionForm.getSubject(), questionForm.getContent());
         return "redirect:/question/list"; // 질문 저장 후 질문목록으로 이동
     }
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/modify/{id}")
-    public String questionModify(QuestionForm questionForm, @PathVariable("id") Long id, Principal principal) {
+    public String modifyQuestion(QuestionForm questionForm, @PathVariable("id") Long id, Principal principal) {
         Question question = questionService.getQuestion(id);
         validateAuthor(principal, question);
         questionForm.setSubject(question.getSubject());
@@ -76,7 +76,7 @@ public class QuestionController {
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/modify/{id}")
-    public String questionModify(@Valid QuestionForm questionForm, BindingResult bindingResult, Principal principal, @PathVariable("id") Long id) {
+    public String modifyQuestion(@Valid QuestionForm questionForm, BindingResult bindingResult, Principal principal, @PathVariable("id") Long id) {
         String resultPage = handleError(bindingResult);
         if (resultPage != null) {
             return resultPage;
@@ -85,17 +85,17 @@ public class QuestionController {
         validateAuthor(principal, question);
 
         questionService.modify(question, questionForm.getSubject(), questionForm.getContent());
-        log.info("Modified question with ID: {}, subject: {}, content: {}", question.getId(), question.getSubject(), question.getContent());
+        log.info("modified question with ID: {}, subject: {}, content: {}, modifyDate: {}", question.getId(), question.getSubject(), question.getContent(), question.getModifyDate());
         return String.format("redirect:/question/detail/%s", id);
     }
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/delete/{id}")
-    public String questionDelete(Principal principal, @PathVariable("id") Long id) {
+    public String deleteQuestion(Principal principal, @PathVariable("id") Long id) {
         Question question = questionService.getQuestion(id);
         validateAuthor(principal, question);
 
-        log.info("Deleting question with ID: {}, subject: {}", question.getId(), question.getSubject());
+        log.info("deleting question with ID: {}, subject: {}", question.getId(), question.getSubject());
         questionService.delete(question);
         return "redirect:/";
     }
@@ -118,7 +118,6 @@ public class QuestionController {
             log.error("폼 검증 오류: {}", bindingResult.getAllErrors());
             return "question_form";
         }
-
         return null;
     }
 }
