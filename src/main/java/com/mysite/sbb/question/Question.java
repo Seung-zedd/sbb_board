@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -28,9 +29,11 @@ public class Question {
     @OneToMany(mappedBy = "question", cascade = CascadeType.REMOVE)
     private List<Answer> answerList;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private SiteUser author; // 사용자 1명이 질문 여러 개 작성
     private LocalDateTime modifyDate;
 
+    @OneToMany(mappedBy = "question")
+    private Set<QuestionVoter> questionVoters;
 
 }

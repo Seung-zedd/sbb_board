@@ -94,13 +94,25 @@ public class QuestionController {
     public String deleteQuestion(Principal principal, @PathVariable("id") Long id) {
         Question question = questionService.getQuestion(id);
         validateAuthor(principal, question);
-
-        log.info("deleting question with ID: {}, subject: {}", question.getId(), question.getSubject());
         questionService.delete(question);
+        log.info("after deleting question with ID: {}, subject: {}", question.getId(), question.getSubject());
         return "redirect:/";
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/vote/{id}")
+    public String voteQuestion(Principal principal, @PathVariable("id") Long id) {
+        Question question = questionService.getQuestion(id);
+        SiteUser siteUser = userService.getUser(principal.getName());
+        questionService.vote(question, siteUser);
+        log.info("after voting question with ID: {}, siteUser: {}", question.getId(), siteUser.getId());
+        return String.format("redirect:/question/detail/%s", id);
+    }
+
+
+
     private void validateAuthor(Principal principal, Question question) {
+
         if (!question.getAuthor().getUsername().equals(principal.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정 권한이 없습니다.");
         }

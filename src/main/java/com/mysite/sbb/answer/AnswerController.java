@@ -66,6 +66,19 @@ public class AnswerController {
         return String.format("redirect:/question/detail/%s", answer.getQuestion().getId());
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/delete/{id}")
+    public String deleteAnswer(Principal principal, @PathVariable("id") Long id) {
+        Answer answer = answerService.getAnswer(id);
+        validateAuthor(principal, answer);
+
+        log.info("deleting answer with ID: {}, content: {}", answer.getId(), answer.getContent());
+        answerService.delete(answer);
+        log.info("after deleting answer with ID: {}, content: {}, question ID: {}", answer.getId(), answer.getContent(), answer.getQuestion().getId());
+        return String.format("redirect:/question/detail/%s", answer.getQuestion().getId());
+    }
+
+
     private void validateAuthor(Principal principal, Answer answer) {
         if (!answer.getAuthor().getUsername().equals(principal.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정 권한이 없습니다.");

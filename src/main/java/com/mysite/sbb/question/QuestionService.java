@@ -17,6 +17,7 @@ import java.util.List;
 @Service
 public class QuestionService {
     private final QuestionRepository questionRepository;
+    private final QuestionVotersRepository questionVotersRepository;
 
     public Page<Question> getList(int page) {
         List<Sort.Order> sorts = new ArrayList<>();
@@ -50,5 +51,13 @@ public class QuestionService {
 
     public void delete(Question question) {
         questionRepository.delete(question);
+    }
+
+    public void vote(Question question, SiteUser siteUser) {
+        QuestionVoter questionVoter = new QuestionVoter();
+        questionVoter.takeQuestion(question);
+        questionVoter.takeSiteUser(siteUser);
+        questionRepository.save(question);
+        questionVotersRepository.save(questionVoter);
     }
 }

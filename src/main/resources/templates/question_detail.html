@@ -18,6 +18,12 @@
                 </div>
             </div>
             <div class="my-3">
+                <a href="javascript:void(0);" class="recommend btn btn-sm btn-outline-secondary"
+                   th:data-uri="@{|/question/vote/${question.id}|}">
+                    추천
+                    <span class="badge rounded-pill bg-success"
+                          th:text="${#lists.size(question.questionVoters)}"></span>
+                </a>
                 <a th:href="@{|/question/modify/${question.id}|}" class="btn btn-sm btn-outline-secondary"
                    sec:authorize="isAuthenticated()"
                    th:if="${question.author != null and #authentication.getPrincipal().getUsername() == question.author.username}"
@@ -48,31 +54,44 @@
                     </div>
                 </div>
             </div>
-                <div class="my-3">
-                    <a th:href="@{|/answer/modify/${answer.id}|}" class="btn btn-sm btn-outline-secondary"
-                       sec:authorize="isAuthenticated()"
-                       th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}"
-                       th:text="수정"></a>
-                </div>
+            <div class="my-3">
+                <a th:href="@{|/answer/modify/${answer.id}|}" class="btn btn-sm btn-outline-secondary"
+                   sec:authorize="isAuthenticated()"
+                   th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}"
+                   th:text="수정"></a>
+                <a href="javascript:void(0);" th:data-uri="@{|/answer/delete/${answer.id}|}"
+                   class="delete btn btn-sm btn-outline-secondary"
+                   sec:authorize=" isAuthenticated()"
+                   th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}"
+                   th:text="삭제"></a>
             </div>
         </div>
-        <!-- 답 변 반 복 끝 -->
-        <!-- 답 변 작 성 -->
-        <form th:action="@{|/answer/create/${question.id}|}" th:object="${answerForm}" method="post" class="my-3 ">
-            <div th:replace="~{form_errors :: formErrorsFragment}"></div>
-            <textarea sec:authorize="isAnonymous()" disabled th:field="*{content}" rows="10" class="form-control"
-                      placeholder="로그인 후 답변을 작성해 주세요."></textarea>
-            <textarea sec:authorize="isAuthenticated()" th:field="*{content}" class="form-control" rows="10"></textarea>
-            <input type="submit" value="답변 등록" class="btn btn-primary my-2"></form>
     </div>
-    <script layout:fragment="script" type='text/javascript'>
-        const delete_elements = document.getElementsByClassName("delete");
-        Array.from(delete_elements).forEach(function (element) {
-            element.addEventListener('click', function () {
-                if (confirm("정말로 삭제하시겠습니까?")) {
-                    location.href = this.dataset.uri;
-                }
-            });
+    <!-- 답 변 반 복 끝 -->
+    <!-- 답 변 작 성 -->
+    <form th:action="@{|/answer/create/${question.id}|}" th:object="${answerForm}" method="post" class="my-3 ">
+        <div th:replace="~{form_errors :: formErrorsFragment}"></div>
+        <textarea sec:authorize="isAnonymous()" disabled th:field="*{content}" rows="10" class="form-control"
+                  placeholder="로그인 후 답변을 작성해 주세요."></textarea>
+        <textarea sec:authorize="isAuthenticated()" th:field="*{content}" class="form-control" rows="10"></textarea>
+        <input type="submit" value="답변 등록" class="btn btn-primary my-2"></form>
+</div>
+<script layout:fragment="script" type='text/javascript'>
+    const delete_elements = document.getElementsByClassName("delete");
+    Array.from(delete_elements).forEach(function (element) {
+        element.addEventListener('click', function () {
+            if (confirm("정말로 삭제하시겠습니까?")) {
+                location.href = this.dataset.uri;
+            }
         });
-    </script>
+    });
+    const recommend_elements = document.getElementsByClassName("recommend");
+    Array.from(recommend_elements).forEach(function (element) {
+        element.addEventListener('click', function () {
+            if (confirm(" 정말로 추천하시겠습니까?")) {
+                location.href = this.dataset.uri;
+            }
+        });
+    });
+</script>
 </html>
