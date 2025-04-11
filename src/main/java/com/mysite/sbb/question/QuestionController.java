@@ -1,6 +1,7 @@
 package com.mysite.sbb.question;
 
 import com.mysite.sbb.answer.AnswerForm;
+import com.mysite.sbb.common.FieldErrorHandler;
 import com.mysite.sbb.user.SiteUser;
 import com.mysite.sbb.user.UserService;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.security.Principal;
 
@@ -25,6 +27,7 @@ import java.security.Principal;
 public class QuestionController {
     private final QuestionService questionService;
     private final UserService userService;
+    private final FieldErrorHandler fieldErrorHandler;
 
     @GetMapping("/list")
     public String list(Model model, @RequestParam(value = "page", defaultValue = "0") int page) {
@@ -52,16 +55,18 @@ public class QuestionController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/create")
     public String createQuestion(@Valid QuestionForm questionForm, BindingResult bindingResult, Principal principal) {
-        // 사용자가 제목, 내용 둘 다 입력하지 않았을 경우
-        String resultPage = handleError(bindingResult);
+        // 폼 검증
+        String resultPage = fieldErrorHandler.handleError(bindingResult, "question_form");
         if (resultPage != null) {
             return resultPage;
         }
 
+        // 서비스 로직 실행
         SiteUser siteUser = userService.getUser(principal.getName());
         questionService.create(questionForm.getSubject(), questionForm.getContent(), siteUser);
         log.info("created question with siteUser: {}, subject: {}, content: {}", siteUser.getUsername(), questionForm.getSubject(), questionForm.getContent());
         return "redirect:/question/list"; // 질문 저장 후 질문목록으로 이동
+
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -77,13 +82,14 @@ public class QuestionController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/modify/{id}")
     public String modifyQuestion(@Valid QuestionForm questionForm, BindingResult bindingResult, Principal principal, @PathVariable("id") Long id) {
-        String resultPage = handleError(bindingResult);
+        // 폼 검증
+        String resultPage = fieldErrorHandler.handleError(bindingResult, "question_form");
         if (resultPage != null) {
             return resultPage;
         }
+        // 서비스 로직 실행
         Question question = questionService.getQuestion(id);
         validateAuthor(principal, question);
-
         questionService.modify(question, questionForm.getSubject(), questionForm.getContent());
         log.info("modified question with ID: {}, subject: {}, content: {}, modifyDate: {}", question.getId(), question.getSubject(), question.getContent(), question.getModifyDate());
         return String.format("redirect:/question/detail/%s", id);
@@ -101,11 +107,18 @@ public class QuestionController {
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/vote/{id}")
-    public String voteQuestion(Principal principal, @PathVariable("id") Long id) {
+    public String voteQuestion(RedirectAttributes redirectAttributes, Principal principal, @PathVariable("id") Long id) {
         Question question = questionService.getQuestion(id);
         SiteUser siteUser = userService.getUser(principal.getName());
-        questionService.vote(question, siteUser);
-        log.info("after voting question with ID: {}, siteUser: {}", question.getId(), siteUser.getId());
+
+        try {
+            questionService.vote(question, siteUser);
+            log.info("after voting question with ID: {}, siteUser: {}", question.getId(), siteUser.getId());
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("voteError", e.getMessage());
+            log.error("duplicate vote error for question ID: {}, siteUser: {}", question.getId(), siteUser.getId());
+        }
+
         return String.format("redirect:/question/detail/%s", id);
     }
 
@@ -118,18 +131,4 @@ public class QuestionController {
         }
     }
 
-    private String handleError(BindingResult bindingResult) {
-        if (bindingResult.hasFieldErrors("subject") && bindingResult.hasFieldErrors("content")) {
-            // Add a global error instead of field errors
-            bindingResult.reject("bothFieldsEmpty", "제목과 내용을 입력해주세요.");
-            log.error("사용자가 제목과 내용 모두 입력하지 않음: {}", bindingResult.getGlobalErrors());
-            return "question_form";
-        }
-
-        if (bindingResult.hasErrors()) {
-            log.error("폼 검증 오류: {}", bindingResult.getAllErrors());
-            return "question_form";
-        }
-        return null;
-    }
 }

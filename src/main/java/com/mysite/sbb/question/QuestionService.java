@@ -1,6 +1,6 @@
 package com.mysite.sbb.question;
 
-import com.mysite.sbb.DataNotFoundException;
+import com.mysite.sbb.common.DataNotFoundException;
 import com.mysite.sbb.user.SiteUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -54,6 +54,9 @@ public class QuestionService {
     }
 
     public void vote(Question question, SiteUser siteUser) {
+        if (questionVotersRepository.existsByQuestionAndSiteUser(question, siteUser)) {
+            throw new IllegalStateException("이미 추천한 사용자입니다.");
+        }
         QuestionVoter questionVoter = new QuestionVoter();
         questionVoter.takeQuestion(question);
         questionVoter.takeSiteUser(siteUser);

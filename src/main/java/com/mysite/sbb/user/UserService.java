@@ -1,6 +1,6 @@
 package com.mysite.sbb.user;
 
-import com.mysite.sbb.DataNotFoundException;
+import com.mysite.sbb.common.DataNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

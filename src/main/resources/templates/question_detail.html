@@ -76,7 +76,14 @@
         <textarea sec:authorize="isAuthenticated()" th:field="*{content}" class="form-control" rows="10"></textarea>
         <input type="submit" value="답변 등록" class="btn btn-primary my-2"></form>
 </div>
-<script layout:fragment="script" type='text/javascript'>
+<script layout:fragment="script" type='text/javascript' th:inline="javascript">
+    /* 서버에서 전달된 voteError 값을 JavaScript 변수로 가져옴 */
+    var voteError = [[${voteError != null ? voteError: "null"}]];
+
+    if (voteError !== "null") {
+        alert(voteError);
+    }
+
     const delete_elements = document.getElementsByClassName("delete");
     Array.from(delete_elements).forEach(function (element) {
         element.addEventListener('click', function () {
@@ -93,5 +100,6 @@
             }
         });
     });
+
 </script>
 </html>
