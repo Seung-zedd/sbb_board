@@ -39,9 +39,9 @@ public class AnswerController {
             return "question_detail";
         }
 
-        answerService.create(question, answerForm.getContent(), siteUser);
+        Answer answer = answerService.create(question, answerForm.getContent(), siteUser);
         log.info("created answer with siteUser: {}, content: {}", siteUser.getUsername(), answerForm.getContent());
-        return String.format("redirect:/question/detail/%s", id);
+        return String.format("redirect:/question/detail/%s#answer_%s", id, answer.getId());
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -64,7 +64,7 @@ public class AnswerController {
         validateAuthor(principal, answer);
         answerService.modify(answer, answerForm.getContent());
         log.info("modified answer with ID: {}, content: {}, modifyDate: {}", answer.getId(), answer.getContent(), answer.getModifyDate());
-        return String.format("redirect:/question/detail/%s", answer.getQuestion().getId());
+        return String.format("redirect:/question/detail/%s#answer_%s", answer.getQuestion().getId(), answer.getId());
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -93,7 +93,7 @@ public class AnswerController {
             log.error("duplicate vote error for answer ID: {}, siteUser: {}", answer.getId(), siteUser.getId());
         }
 
-        return String.format("redirect:/question/detail/%s", answer.getQuestion().getId());
+        return String.format("redirect:/question/detail/%s#answer_%s", answer.getQuestion().getId(), answer.getId());
     }
 
 

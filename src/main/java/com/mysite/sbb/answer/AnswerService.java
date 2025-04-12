@@ -13,14 +13,15 @@ public class AnswerService {
     private final AnswerRepository answerRepository;
     private final AnswerVotersRepository answerVotersRepository;
 
-    public void create(Question question, String content, SiteUser author) {
+    public Answer create(Question question, String content, SiteUser author) {
         Answer answer = new Answer();
         answer.setQuestion(question);
         answer.setCreateDate(LocalDateTime.now());
         answer.setContent(content);
         answer.setAuthor(author);
-
         answerRepository.save(answer);
+
+        return answer;
     }
 
     public Answer getAnswer(Long id) {

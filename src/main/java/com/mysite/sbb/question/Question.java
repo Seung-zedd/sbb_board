@@ -33,7 +33,7 @@ public class Question {
     private SiteUser author; // 사용자 1명이 질문 여러 개 작성
     private LocalDateTime modifyDate;
 
-    @OneToMany(mappedBy = "question")
+    @OneToMany(mappedBy = "question", cascade = CascadeType.REMOVE)
     private Set<QuestionVoter> questionVoters;
 
 }
