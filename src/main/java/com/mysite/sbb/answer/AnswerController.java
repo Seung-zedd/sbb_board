@@ -14,6 +14,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.security.Principal;
 
@@ -75,6 +76,23 @@ public class AnswerController {
         log.info("deleting answer with ID: {}, content: {}", answer.getId(), answer.getContent());
         answerService.delete(answer);
         log.info("after deleting answer with ID: {}, content: {}, question ID: {}", answer.getId(), answer.getContent(), answer.getQuestion().getId());
+        return String.format("redirect:/question/detail/%s", answer.getQuestion().getId());
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/vote/{id}")
+    public String voteAnswer(RedirectAttributes redirectAttributes, Principal principal, @PathVariable("id") Long id) {
+        Answer answer = answerService.getAnswer(id);
+        SiteUser siteUser = userService.getUser(principal.getName());
+
+        try {
+            answerService.vote(answer, siteUser);
+            log.info("after voting answer with ID: {}, siteUser:{}", answer.getId(), siteUser.getId());
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("voteError", e.getMessage());
+            log.error("duplicate vote error for answer ID: {}, siteUser: {}", answer.getId(), siteUser.getId());
+        }
+
         return String.format("redirect:/question/detail/%s", answer.getQuestion().getId());
     }
 

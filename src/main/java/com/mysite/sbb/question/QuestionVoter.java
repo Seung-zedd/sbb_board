@@ -7,6 +7,7 @@ import lombok.Setter;
 
 @Entity
 @Table(
+        // 묶어서 유니크 제약조건 설정(중복 추천 방지)
         uniqueConstraints = @UniqueConstraint(columnNames = {"QUESTION_ID", "SITE_USER_ID"})
 )
 public class QuestionVoter {

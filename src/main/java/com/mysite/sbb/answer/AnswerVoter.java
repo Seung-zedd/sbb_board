@@ -6,6 +6,9 @@ import lombok.AccessLevel;
 import lombok.Setter;
 
 @Entity
+@Table(
+        uniqueConstraints = @UniqueConstraint(columnNames = {"ANSWER_ID", "SITE_USER_ID"})
+)
 public class AnswerVoter {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -13,10 +16,12 @@ public class AnswerVoter {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @Setter(AccessLevel.NONE)
+    @JoinColumn(name = "ANSWER_ID")
     private Answer answer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @Setter(AccessLevel.NONE)
+    @JoinColumn(name = "SITE_USER_ID")
     private SiteUser siteUser;
 
     public void takeAnswer(Answer answer) {

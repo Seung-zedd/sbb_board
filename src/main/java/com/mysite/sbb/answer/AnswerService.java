@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Service
 public class AnswerService {
     private final AnswerRepository answerRepository;
+    private final AnswerVotersRepository answerVotersRepository;
 
     public void create(Question question, String content, SiteUser author) {
         Answer answer = new Answer();
@@ -34,6 +35,17 @@ public class AnswerService {
 
     public void delete(Answer answer) {
         answerRepository.delete(answer);
+    }
+
+    public void vote(Answer answer, SiteUser siteUser) {
+        if (answerVotersRepository.existsByAnswerAndSiteUser(answer, siteUser)) {
+            throw new IllegalStateException("이미 추천한 사용자입니다.");
+        }
+        AnswerVoter answerVoter = new AnswerVoter();
+        answerVoter.takeAnswer(answer);
+        answerVoter.takeSiteUser(siteUser);
+        answerRepository.save(answer);
+        answerVotersRepository.save(answerVoter);
     }
 
 

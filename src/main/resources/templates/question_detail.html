@@ -55,6 +55,11 @@
                 </div>
             </div>
             <div class="my-3">
+                <a href="javascript:void(0);" class="recommend btn btn-sm btn-outline-secondary"
+                   th:data-uri="@{|/answer/vote/${answer.id}|}">
+                    추천
+                    <span class="badge rounded-pill bg-success" th:text="${#lists.size(answer.answerVoters)}"></span>
+                </a>
                 <a th:href="@{|/answer/modify/${answer.id}|}" class="btn btn-sm btn-outline-secondary"
                    sec:authorize="isAuthenticated()"
                    th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}"
@@ -78,7 +83,9 @@
 </div>
 <script layout:fragment="script" type='text/javascript' th:inline="javascript">
     /* 서버에서 전달된 voteError 값을 JavaScript 변수로 가져옴 */
-    var voteError = [[${voteError != null ? voteError: "null"}]];
+    var voteError = [[${voteError != null ? voteError : "null"
+    }]]
+    ;
 
     if (voteError !== "null") {
         alert(voteError);
