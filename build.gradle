@@ -33,6 +33,10 @@ dependencies {
 	implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+	// 마크다운 라이브러리
+	implementation 'org.commonmark:commonmark:0.24.0'
+	implementation 'org.commonmark:commonmark-ext-gfm-tables:0.24.0' // 표 지원
+	implementation 'org.commonmark:commonmark-ext-autolink:0.24.0' // 자동 링크 변환 지원
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.junit.jupiter:junit-jupiter'
