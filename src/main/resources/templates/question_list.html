@@ -69,11 +69,23 @@
             document.getElementById('searchForm').submit();
         });
     });
-    const btn_search = document.getElementById("btn_search");
-    btn_search.addEventListener('click', function () {
+
+    function doSearch() {
         document.getElementById('kw').value = document.getElementById('search_kw').value;
-        document.getElementById('page').value = 0; // 검색 버튼을 클릭할 경우 0 페이지부터 조회한다.
+        document.getElementById('page').value = 0;
         document.getElementById('searchForm').submit();
+    }
+
+    // 버튼은 클릭을 해야하니까 버튼의 id값을 이벤트 리스너 객체로 설정
+    const btn_search = document.getElementById('btn_search');
+    btn_search.addEventListener('click', doSearch);
+
+    // 키보드 입력은 input에 대응하므로 input의 id값을 이벤트 리스너 객체로 설정
+    const searchKw = document.getElementById('search_kw');
+    searchKw.addEventListener('keyup', function(event) {
+        if (event.key === 'Enter') {
+            doSearch();
+        }
     });
 </script>
 </html>
