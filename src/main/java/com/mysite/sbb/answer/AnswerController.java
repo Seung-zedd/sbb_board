@@ -1,5 +1,6 @@
 package com.mysite.sbb.answer;
 
+import com.mysite.sbb.common.AuthorValidator;
 import com.mysite.sbb.question.Question;
 import com.mysite.sbb.question.QuestionService;
 import com.mysite.sbb.user.SiteUser;
@@ -7,13 +8,11 @@ import com.mysite.sbb.user.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.security.Principal;
@@ -26,6 +25,7 @@ public class AnswerController {
     private final QuestionService questionService;
     private final AnswerService answerService;
     private final UserService userService;
+    private final AuthorValidator authorValidator;
 
     // 답변에 글쓴이 항목을 추가하기 위해 스프링 시큐리티의 Principal 객체 사용
     @PreAuthorize("isAuthenticated()")
@@ -48,7 +48,7 @@ public class AnswerController {
     @GetMapping("/modify/{id}")
     public String modifyAnswer(AnswerForm answerForm, @PathVariable("id") Long id, Principal principal) {
         Answer answer = answerService.getAnswer(id);
-        validateAuthor(principal, answer);
+        authorValidator.validateAuthor(principal, answer, Answer::getAuthor);
         answerForm.setContent(answer.getContent());
         return "answer_form";
     }
@@ -61,7 +61,7 @@ public class AnswerController {
             return "answer_form";
         }
         Answer answer = answerService.getAnswer(id);
-        validateAuthor(principal, answer);
+        authorValidator.validateAuthor(principal, answer, Answer::getAuthor);
         answerService.modify(answer, answerForm.getContent());
         log.info("modified answer with ID: {}, content: {}, modifyDate: {}", answer.getId(), answer.getContent(), answer.getModifyDate());
         return String.format("redirect:/question/detail/%s#answer_%s", answer.getQuestion().getId(), answer.getId());
@@ -71,7 +71,7 @@ public class AnswerController {
     @GetMapping("/delete/{id}")
     public String deleteAnswer(Principal principal, @PathVariable("id") Long id) {
         Answer answer = answerService.getAnswer(id);
-        validateAuthor(principal, answer);
+        authorValidator.validateAuthor(principal, answer, Answer::getAuthor);
 
         log.info("deleting answer with ID: {}, content: {}", answer.getId(), answer.getContent());
         answerService.delete(answer);
@@ -97,9 +97,9 @@ public class AnswerController {
     }
 
 
-    private void validateAuthor(Principal principal, Answer answer) {
+    /*private void validateAuthor(Principal principal, Answer answer) {
         if (!answer.getAuthor().getUsername().equals(principal.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정 권한이 없습니다.");
         }
-    }
+    }*/
 }

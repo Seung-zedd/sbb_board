@@ -1,6 +1,7 @@
 package com.mysite.sbb.question;
 
 import com.mysite.sbb.answer.AnswerForm;
+import com.mysite.sbb.common.AuthorValidator;
 import com.mysite.sbb.common.FieldErrorHandler;
 import com.mysite.sbb.user.SiteUser;
 import com.mysite.sbb.user.UserService;
@@ -8,13 +9,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.security.Principal;
@@ -28,6 +27,7 @@ public class QuestionController {
     private final QuestionService questionService;
     private final UserService userService;
     private final FieldErrorHandler fieldErrorHandler;
+    private final AuthorValidator authorValidator;
 
     @GetMapping("/list")
     public String list(Model model, @RequestParam(value = "page", defaultValue = "0") int page, @RequestParam(value = "kw", defaultValue = "") String kw) {
@@ -74,7 +74,8 @@ public class QuestionController {
     @GetMapping("/modify/{id}")
     public String modifyQuestion(QuestionForm questionForm, @PathVariable("id") Long id, Principal principal) {
         Question question = questionService.getQuestion(id);
-        validateAuthor(principal, question);
+        authorValidator.validateAuthor(principal, question, Question::getAuthor);
+
         questionForm.setSubject(question.getSubject());
         questionForm.setContent(question.getContent());
         return "question_form";
@@ -90,8 +91,7 @@ public class QuestionController {
         }
         // 서비스 로직 실행
         Question question = questionService.getQuestion(id);
-        validateAuthor(principal, question);
-        questionService.modify(question, questionForm.getSubject(), questionForm.getContent());
+        authorValidator.validateAuthor(principal, question, Question::getAuthor);        questionService.modify(question, questionForm.getSubject(), questionForm.getContent());
         log.info("modified question with ID: {}, subject: {}, content: {}, modifyDate: {}", question.getId(), question.getSubject(), question.getContent(), question.getModifyDate());
         return String.format("redirect:/question/detail/%s", id);
     }
@@ -100,8 +100,7 @@ public class QuestionController {
     @GetMapping("/delete/{id}")
     public String deleteQuestion(Principal principal, @PathVariable("id") Long id) {
         Question question = questionService.getQuestion(id);
-        validateAuthor(principal, question);
-        questionService.delete(question);
+        authorValidator.validateAuthor(principal, question, Question::getAuthor);        questionService.delete(question);
         log.info("after deleting question with ID: {}, subject: {}", question.getId(), question.getSubject());
         return "redirect:/";
     }
@@ -125,11 +124,11 @@ public class QuestionController {
 
 
 
-    private void validateAuthor(Principal principal, Question question) {
+    /*private void validateAuthor(Principal principal, Question question) {
 
         if (!question.getAuthor().getUsername().equals(principal.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수정 권한이 없습니다.");
         }
-    }
+    }*/
 
 }
