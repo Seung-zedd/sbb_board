@@ -60,7 +60,6 @@ public class QuestionService {
         QuestionVoter questionVoter = new QuestionVoter();
         questionVoter.takeQuestion(question);
         questionVoter.takeSiteUser(siteUser);
-        questionRepository.save(question);
         questionVotersRepository.save(questionVoter);
     }
 }
