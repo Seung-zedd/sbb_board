@@ -3,6 +3,7 @@ package com.mysite.sbb.question;
 import com.mysite.sbb.answer.AnswerForm;
 import com.mysite.sbb.common.AuthorValidator;
 import com.mysite.sbb.common.FieldErrorHandler;
+import com.mysite.sbb.question.dto.QuestionListItemDto;
 import com.mysite.sbb.user.SiteUser;
 import com.mysite.sbb.user.UserService;
 import jakarta.validation.Valid;
@@ -31,7 +32,7 @@ public class QuestionController {
 
     @GetMapping("/list")
     public String list(Model model, @RequestParam(value = "page", defaultValue = "0") int page, @RequestParam(value = "kw", defaultValue = "") String kw) {
-        Page<Question> paging = questionService.getList(page, kw);
+        Page<QuestionListItemDto> paging = questionService.getList(page, kw);
         model.addAttribute("paging", paging);
         model.addAttribute("kw", kw);
         return "question_list";

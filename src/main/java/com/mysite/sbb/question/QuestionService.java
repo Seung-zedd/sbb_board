@@ -1,6 +1,7 @@
 package com.mysite.sbb.question;
 
 import com.mysite.sbb.common.DataNotFoundException;
+import com.mysite.sbb.question.dto.QuestionListItemDto;
 import com.mysite.sbb.user.SiteUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,12 +20,14 @@ public class QuestionService {
     private final QuestionRepository questionRepository;
     private final QuestionVotersRepository questionVotersRepository;
 
-    public Page<Question> getList(int page, String kw) {
+    public Page<QuestionListItemDto> getList(int page, String kw) {
         List<Sort.Order> sorts = new ArrayList<>();
         sorts.add(Sort.Order.desc("createDate"));
         // 한 페이지에 10개의 데이터를 최신순으로 보여줌
         Pageable pageable = PageRequest.of(page, 10, Sort.by(sorts));
-        return questionRepository.findAllByKeyword(kw, pageable);
+        Page<Question> questionPage = questionRepository.findAllByKeyword(kw, pageable);
+        return questionPage.map(QuestionListItemDto::from);
+
     }
 
     public Question getQuestion(Long id) {

@@ -3,7 +3,9 @@ package com.mysite.sbb.question;
 import com.mysite.sbb.answer.Answer;
 import com.mysite.sbb.user.SiteUser;
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
@@ -13,6 +15,7 @@ import java.util.Set;
 @Getter
 @Setter
 @Entity
+@NoArgsConstructor
 public class Question {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,4 +39,12 @@ public class Question {
     @OneToMany(mappedBy = "question", cascade = CascadeType.REMOVE)
     private Set<QuestionVoter> questionVoters;
 
+    @Builder
+    private Question(Long id, String subject, SiteUser author, LocalDateTime createDate, List<Answer> answerList) {
+        this.id = id;
+        this.subject = subject;
+        this.author = author;
+        this.createDate = createDate;
+        this.answerList = answerList;
+    }
 }

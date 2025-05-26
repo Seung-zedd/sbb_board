@@ -21,17 +21,19 @@
         </tr>
         </thead>
         <tbody>
-        <tr class="text-center" th:each="question, loop : ${paging}">
+        <tr class="text-center" th:each="questionListItemDto, loop : ${paging}">
             <td th:text="${paging.getTotalElements - (paging.number * paging.size) - loop.index}"></td>
             <td class="text-start">
                 <!-- question.subject에 URL을 하이퍼링크로 매핑했음-->
-                <a th:href="@{|/question/detail/${question.id}|}" th:text="${question.subject}"></a>
+                <a th:href="@{|/question/detail/${questionListItemDto.id}|}"
+                   th:text="${questionListItemDto.subject}"></a>
                 <span class="text-danger small ms-2"
-                      th:if="${#lists.size(question.answerList) > 0}"
-                      th:text="${#lists.size(question.answerList)}"> </span>
+                      th:if="${questionListItemDto.answerCount > 0}"
+                      th:text="${questionListItemDto.answerCount}"> </span>
             </td>
-            <td><span th:if="${question.author != null}" th:text="${question.author.username}"></span></td>
-            <td th:text="${#temporals.format(question.createDate, 'yyyy-MM-dd HH:mm')}"></td>
+            <td><span th:if="${questionListItemDto.author != null}"
+                      th:text="${questionListItemDto.author.username}"></span></td>
+            <td th:text="${#temporals.format(questionListItemDto.createDate, 'yyyy-MM-dd HH:mm')}"></td>
         </tr>
         </tbody>
     </table>
@@ -43,10 +45,11 @@
                     <span>이전</span>
                 </a>
             </li>
-            <li th:each="page: ${#numbers.sequence((paging.number / 5) * 5, ((paging.number / 5) * 5) + 4)}"
-                th:if="${page < paging.totalPages}"
-                th:classappend="${page == paging.number} ? 'active'" class="page-item">
-                <a th:text="${page}" class="page-link" th:href="@{|?page=${page}|}"></a>
+            <li th:each="page: ${#numbers.sequence( (paging.number/5)*5 , T(java.lang.Math).min(((paging.number/5)*5) + 4, paging.totalPages - 1) )}"
+                th:if="${page >= 0 and page < paging.totalPages}"
+                th:classappend="${page == paging.number} ? 'active'"
+                class="page-item">
+                <a th:text="${page + 1}" class="page-link" th:href="@{|?page=${page}&kw=${kw}|}"></a>
             </li>
             <li class="page-item" th:classappend="${((paging.number / 5) * 5) + 5 >= paging.totalPages} ? 'disabled'">
                 <a class="page-link" href="javascript:void(0)" th:data-page="${(paging.number / 5) * 5 + 5}">
@@ -82,7 +85,7 @@
 
     // 키보드 입력은 input에 대응하므로 input의 id값을 이벤트 리스너 객체로 설정
     const searchKw = document.getElementById('search_kw');
-    searchKw.addEventListener('keyup', function(event) {
+    searchKw.addEventListener('keyup', function (event) {
         if (event.key === 'Enter') {
             doSearch();
         }
