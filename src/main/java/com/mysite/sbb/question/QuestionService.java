@@ -25,13 +25,20 @@ public class QuestionService {
     public Page<QuestionListItemDto> getList(int page, String kw) {
         List<Sort.Order> sorts = new ArrayList<>();
         sorts.add(Sort.Order.desc("createDate"));
-        // 한 페이지에 10개의 데이터를 최신순으로 보여줌
         Pageable pageable = PageRequest.of(page, 10, Sort.by(sorts));
-        Page<Question> questionPage = questionRepository.findAllByKeyword(kw, pageable);
-        log.info("조회된 총 데이터: {}, 조회된 현재 데이터: {}", questionPage.getTotalElements(), questionPage.getContent());
-        return questionPage.map(QuestionListItemDto::from);
 
+        Page<Question> questionPage;
+        if (kw == null || kw.trim().isEmpty()) {
+            // 검색어가 없으면 전체 조회
+            questionPage = questionRepository.findAll(pageable);
+        } else {
+            // 검색어가 있으면 검색
+            questionPage = questionRepository.findAllByKeyword(kw, pageable);
+        }
+
+        return questionPage.map(QuestionListItemDto::from);
     }
+
 
     public Question getQuestion(Long id) {
         return questionRepository.findById(id).orElseThrow(() -> new DataNotFoundException("question not found"));
