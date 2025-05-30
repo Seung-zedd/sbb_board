@@ -4,6 +4,7 @@ import com.mysite.sbb.common.DataNotFoundException;
 import com.mysite.sbb.question.dto.QuestionListItemDto;
 import com.mysite.sbb.user.SiteUser;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +17,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @Service
+@Slf4j
 public class QuestionService {
     private final QuestionRepository questionRepository;
     private final QuestionVotersRepository questionVotersRepository;
@@ -26,6 +28,7 @@ public class QuestionService {
         // 한 페이지에 10개의 데이터를 최신순으로 보여줌
         Pageable pageable = PageRequest.of(page, 10, Sort.by(sorts));
         Page<Question> questionPage = questionRepository.findAllByKeyword(kw, pageable);
+        log.info("조회된 총 데이터: {}, 조회된 현재 데이터: {}", questionPage.getTotalElements(), questionPage.getContent());
         return questionPage.map(QuestionListItemDto::from);
 
     }
