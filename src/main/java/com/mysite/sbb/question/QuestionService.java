@@ -1,6 +1,7 @@
 package com.mysite.sbb.question;
 
 import com.mysite.sbb.common.DataNotFoundException;
+import com.mysite.sbb.question.dto.QuestionDetailDto;
 import com.mysite.sbb.question.dto.QuestionListItemDto;
 import com.mysite.sbb.user.SiteUser;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,11 @@ import java.util.List;
 public class QuestionService {
     private final QuestionRepository questionRepository;
     private final QuestionVotersRepository questionVotersRepository;
+
+    public QuestionDetailDto getQuestionDto(Long id) {
+        Question question = this.getQuestion(id);
+        return QuestionDetailDto.from(question);
+    }
 
     public Page<QuestionListItemDto> getList(int page, String kw) {
         List<Sort.Order> sorts = new ArrayList<>();

@@ -1,81 +1,81 @@
 <html layout:decorate="~{layout}" xmlns:layout="http://www.w3.org/1999/xhtml" xmlns:sec="http://www.w3.org/1999/xhtml">
 <div layout:fragment="content" class="container my-3">
-    <!-- 질 문 --> <h2 class="border-bottom py-2" th:text="${question.subject}"></h2>
+    <!-- 질 문 --> <h2 class="border-bottom py-2" th:text="${questionDto.subject}"></h2>
     <div class="card my-3">
         <div class="card-body">
-            <div class="card-text" th:utext="${@commonUtil.markdown(question.content)}"></div>
+            <div class="card-text" th:utext="${@commonUtil.markdown(questionDto.content)}"></div>
             <div class="d-flex justify-content-end">
                 <div class="badge bg-light text-dark p-2 text-start">
                     <div class="mb-2">
-                        <span th:if="${question.author != null}" th:text="${question.author.username}"></span>
+                        <span th:if="${questionDto.author != null}" th:text="${questionDto.author.username}"></span>
                         <!-- 수정 시간이 있을 경우 -->
-                        <span th:if="${question.modifyDate != null}"
-                              th:text="${#temporals.format(question.modifyDate, 'yyyy-MM-dd HH:mm')}"></span>
+                        <span th:if="${questionDto.modifyDate != null}"
+                              th:text="${#temporals.format(questionDto.modifyDate, 'yyyy-MM-dd HH:mm')}"></span>
                         <!-- 수정 시간이 없을 경우(작성 시간만 있을 경우) -->
-                        <span th:if="${question.modifyDate == null}"
-                              th:text="${#temporals.format(question.createDate, 'yyyy-MM-dd HH:mm')}"></span>
+                        <span th:if="${questionDto.modifyDate == null}"
+                              th:text="${#temporals.format(questionDto.createDate, 'yyyy-MM-dd HH:mm')}"></span>
                     </div>
                 </div>
             </div>
             <div class="my-3">
                 <a href="javascript:void(0);" class="recommend btn btn-sm btn-outline-secondary"
-                   th:data-uri="@{|/question/vote/${question.id}|}">
+                   th:data-uri="@{|/question/vote/${questionDto.id}|}">
                     추천
                     <span class="badge rounded-pill bg-success"
-                          th:text="${#lists.size(question.questionVoters)}"></span>
+                          th:text="${questionDto.voteCount}"></span>
                 </a>
-                <a th:href="@{|/question/modify/${question.id}|}" class="btn btn-sm btn-outline-secondary"
+                <a th:href="@{|/question/modify/${questionDto.id}|}" class="btn btn-sm btn-outline-secondary"
                    sec:authorize="isAuthenticated()"
-                   th:if="${question.author != null and #authentication.getPrincipal().getUsername() == question.author.username}"
+                   th:if="${questionDto.author != null and #authentication.getPrincipal().getUsername() == questionDto.author.username}"
                    th:text="수정"></a>
-                <a href="javascript:void(0);" th:data-uri="@{|/question/delete/${question.id}|}"
+                <a href="javascript:void(0);" th:data-uri="@{|/question/delete/${questionDto.id}|}"
                    class="delete btn btn-sm btn-outline-secondary" sec:authorize="isAuthenticated()"
-                   th:if="${question.author != null and #authentication.getPrincipal().getUsername() == question.author.username}"
+                   th:if="${questionDto.author != null and #authentication.getPrincipal().getUsername() == questionDto.author.username}"
                    th:text="삭제"></a>
             </div>
         </div>
     </div>
     <!-- 답 변 의 갯 수 표 시 --> <h5 class="border-bottom my-3 py-2"
-                               th:text="|${#lists.size(question.answerList)}개의 답변이 있습니다.|"></h5>
+                               th:text="|${questionDto.answerCount}개의 답변이 있습니다.|"></h5>
     <!-- 답 변 반 복 시 작 -->
-    <div class="card my-3" th:each="answer : ${question.answerList}">
-        <a th:id="|answer_${answer.id}|"></a>
+    <div class="card my-3" th:each="answerDto : ${questionDto.answerList}">
+        <a th:id="|answer_${answerDto.id}|"></a>
         <div class="card-body">
-            <div class="card-text" th:utext="${@commonUtil.markdown(answer.content)}"></div>
+            <div class="card-text" th:utext="${@commonUtil.markdown(answerDto.content)}"></div>
             <div class="d-flex justify-content-end">
                 <div class="badge bg-light text-dark p-2 text-start">
                     <div class="mb-2">
-                        <span th:if="${answer.author != null}" th:text="${answer.author.username}"></span>
+                        <span th:if="${answerDto.author != null}" th:text="${answerDto.author.username}"></span>
                         <!-- 수정 시간이 있을 경우 -->
-                        <span th:if="${answer.modifyDate != null}"
-                              th:text="${#temporals.format(answer.modifyDate, 'yyyy-MM-dd HH:mm')}"></span>
+                        <span th:if="${answerDto.modifyDate != null}"
+                              th:text="${#temporals.format(answerDto.modifyDate, 'yyyy-MM-dd HH:mm')}"></span>
                         <!-- 수정 시간이 없을 경우(작성 시간만 있을 경우) -->
-                        <span th:if="${answer.modifyDate == null}"
-                              th:text="${#temporals.format(answer.createDate, 'yyyy-MM-dd HH:mm')}"></span>
+                        <span th:if="${answerDto.modifyDate == null}"
+                              th:text="${#temporals.format(answerDto.createDate, 'yyyy-MM-dd HH:mm')}"></span>
                     </div>
                 </div>
             </div>
             <div class="my-3">
                 <a href="javascript:void(0);" class="recommend btn btn-sm btn-outline-secondary"
-                   th:data-uri="@{|/answer/vote/${answer.id}|}">
+                   th:data-uri="@{|/answer/vote/${answerDto.id}|}">
                     추천
-                    <span class="badge rounded-pill bg-success" th:text="${#lists.size(answer.answerVoters)}"></span>
+                    <span class="badge rounded-pill bg-success" th:text="${answerDto.voteCount}"></span>
                 </a>
-                <a th:href="@{|/answer/modify/${answer.id}|}" class="btn btn-sm btn-outline-secondary"
+                <a th:href="@{|/answer/modify/${answerDto.id}|}" class="btn btn-sm btn-outline-secondary"
                    sec:authorize="isAuthenticated()"
-                   th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}"
+                   th:if="${answerDto.author != null and #authentication.getPrincipal().getUsername() == answerDto.author.username}"
                    th:text="수정"></a>
-                <a href="javascript:void(0);" th:data-uri="@{|/answer/delete/${answer.id}|}"
+                <a href="javascript:void(0);" th:data-uri="@{|/answer/delete/${answerDto.id}|}"
                    class="delete btn btn-sm btn-outline-secondary"
                    sec:authorize=" isAuthenticated()"
-                   th:if="${answer.author != null and #authentication.getPrincipal().getUsername() == answer.author.username}"
+                   th:if="${answerDto.author != null and #authentication.getPrincipal().getUsername() == answerDto.author.username}"
                    th:text="삭제"></a>
             </div>
         </div>
     </div>
     <!-- 답 변 반 복 끝 -->
     <!-- 답 변 작 성 -->
-    <form th:action="@{|/answer/create/${question.id}|}" th:object="${answerForm}" method="post" class="my-3 ">
+    <form th:action="@{|/answer/create/${questionDto.id}|}" th:object="${answerForm}" method="post" class="my-3 ">
         <div th:replace="~{form_errors :: formErrorsFragment}"></div>
         <textarea sec:authorize="isAnonymous()" disabled th:field="*{content}" rows="10" class="form-control"
                   placeholder="로그인 후 답변을 작성해 주세요."></textarea>

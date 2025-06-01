@@ -1,8 +1,10 @@
 package com.mysite.sbb.answer;
 
+import com.mysite.sbb.answer.dto.AnswerDto;
 import com.mysite.sbb.common.AuthorValidator;
 import com.mysite.sbb.question.Question;
 import com.mysite.sbb.question.QuestionService;
+import com.mysite.sbb.question.dto.QuestionDetailDto;
 import com.mysite.sbb.user.SiteUser;
 import com.mysite.sbb.user.UserService;
 import jakarta.validation.Valid;
@@ -35,7 +37,8 @@ public class AnswerController {
         SiteUser siteUser = userService.getUser(principal.getName());
         // 사용자가 내용을 입력하지 않으면 질문 detail로 리다이렉트시킴
         if (bindingResult.hasErrors()) {
-            model.addAttribute("question", question);
+            QuestionDetailDto questionDto = QuestionDetailDto.from(question);
+            model.addAttribute("questionDto", questionDto);
             return "question_detail";
         }
 
@@ -63,7 +66,8 @@ public class AnswerController {
         Answer answer = answerService.getAnswer(id);
         authorValidator.validateAuthor(principal, answer, Answer::getAuthor);
         answerService.modify(answer, answerForm.getContent());
-        log.info("modified answer with ID: {}, content: {}, modifyDate: {}", answer.getId(), answer.getContent(), answer.getModifyDate());
+        AnswerDto answerDto = AnswerDto.from(answer);
+        log.info("modified answer with ID: {}, content: {}, modifyDate: {}", answerDto.getId(), answerDto.getContent(), answerDto.getModifyDate());
         return String.format("redirect:/question/detail/%s#answer_%s", answer.getQuestion().getId(), answer.getId());
     }
 

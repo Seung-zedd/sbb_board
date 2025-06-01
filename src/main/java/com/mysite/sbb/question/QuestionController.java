@@ -3,6 +3,7 @@ package com.mysite.sbb.question;
 import com.mysite.sbb.answer.AnswerForm;
 import com.mysite.sbb.common.AuthorValidator;
 import com.mysite.sbb.common.FieldErrorHandler;
+import com.mysite.sbb.question.dto.QuestionDetailDto;
 import com.mysite.sbb.question.dto.QuestionListItemDto;
 import com.mysite.sbb.user.SiteUser;
 import com.mysite.sbb.user.UserService;
@@ -40,8 +41,8 @@ public class QuestionController {
 
     @GetMapping("/detail/{id}")
     public String detail(Model model, @PathVariable("id") Long id, AnswerForm answerForm) {
-        Question question = questionService.getQuestion(id);
-        model.addAttribute("question", question);
+        QuestionDetailDto questionDto = questionService.getQuestionDto(id);
+        model.addAttribute("questionDto", questionDto);
         return "question_detail";
     }
 
@@ -92,8 +93,10 @@ public class QuestionController {
         }
         // 서비스 로직 실행
         Question question = questionService.getQuestion(id);
-        authorValidator.validateAuthor(principal, question, Question::getAuthor);        questionService.modify(question, questionForm.getSubject(), questionForm.getContent());
-        log.info("modified question with ID: {}, subject: {}, content: {}, modifyDate: {}", question.getId(), question.getSubject(), question.getContent(), question.getModifyDate());
+        authorValidator.validateAuthor(principal, question, Question::getAuthor);
+        questionService.modify(question, questionForm.getSubject(), questionForm.getContent());
+        QuestionDetailDto questionDto = QuestionDetailDto.from(question);
+        log.info("modified question with ID: {}, subject: {}, content: {}, modifyDate: {}", questionDto.getId(), questionDto.getSubject(), questionDto.getContent(), questionDto.getModifyDate());
         return String.format("redirect:/question/detail/%s", id);
     }
 
@@ -101,7 +104,8 @@ public class QuestionController {
     @GetMapping("/delete/{id}")
     public String deleteQuestion(Principal principal, @PathVariable("id") Long id) {
         Question question = questionService.getQuestion(id);
-        authorValidator.validateAuthor(principal, question, Question::getAuthor);        questionService.delete(question);
+        authorValidator.validateAuthor(principal, question, Question::getAuthor);
+        questionService.delete(question);
         log.info("after deleting question with ID: {}, subject: {}", question.getId(), question.getSubject());
         return "redirect:/";
     }

@@ -38,7 +38,6 @@
         </tbody>
     </table>
     <!-- 페이징처리 시작 -->
-    <p th:text="|전체: ${paging.totalElements}개  페이지: ${paging.number + 1}/${paging.totalPages}  크기: ${paging.size}|"></p>
     <div th:if="${!paging.isEmpty()}">
         <ul class="pagination justify-content-center">
             <li class="page-item" th:classappend="${(paging.number / 5) == 0} ? 'disabled'">
