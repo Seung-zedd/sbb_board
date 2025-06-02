@@ -9,10 +9,15 @@
             <input type="text" th:field="*{subject}" class="form-control">
         </div>
         <div class="mb-3">
-            <label for="content" class="form-label">내용</label> <textarea th:field="*{content}" class="form-control"
-                                                                         rows="10"></textarea>
+            <label for="content" class="form-label">내용</label> <textarea th:field="*{content}" id="markdown" class="form-control" rows="10"></textarea>
         </div>
         <input type="submit" value="저장하기" class="btn btn-primary my-2">
     </form>
 </div>
+<script layout:fragment="script">
+    var simplemde = new SimpleMDE({
+        element: document.getElementById("markdown"),
+        spellChecker: false,
+    });
+</script>
 </html>

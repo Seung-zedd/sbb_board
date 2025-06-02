@@ -79,10 +79,16 @@
         <div th:replace="~{form_errors :: formErrorsFragment}"></div>
         <textarea sec:authorize="isAnonymous()" disabled th:field="*{content}" rows="10" class="form-control"
                   placeholder="로그인 후 답변을 작성해 주세요."></textarea>
-        <textarea sec:authorize="isAuthenticated()" th:field="*{content}" class="form-control" rows="10"></textarea>
+        <textarea sec:authorize="isAuthenticated()" th:field="*{content}" id="markdown" class="form-control" rows="10"></textarea>
         <input type="submit" value="답변 등록" class="btn btn-primary my-2"></form>
 </div>
 <script layout:fragment="script" type='text/javascript' th:inline="javascript">
+    // 마크다운 에디터
+    var simplemde = new SimpleMDE({
+        element: document.getElementById("markdown"),
+        spellChecker: false,
+    });
+
     /* 서버에서 전달된 voteError 값을 JavaScript 변수로 가져옴 */
     var voteError = [[${voteError != null ? voteError : "null"
     }]]
@@ -108,6 +114,7 @@
             }
         });
     });
+
 
 </script>
 </html>
