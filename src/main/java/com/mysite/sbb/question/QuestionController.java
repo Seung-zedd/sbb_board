@@ -7,6 +7,7 @@ import com.mysite.sbb.question.dto.QuestionDetailDto;
 import com.mysite.sbb.question.dto.QuestionListItemDto;
 import com.mysite.sbb.user.SiteUser;
 import com.mysite.sbb.user.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,12 @@ public class QuestionController {
     private final AuthorValidator authorValidator;
 
     @GetMapping("/list")
-    public String list(Model model, @RequestParam(value = "page", defaultValue = "0") int page, @RequestParam(value = "kw", defaultValue = "") String kw) {
+    public String list(Model model, HttpServletRequest request, @RequestParam(value = "page", defaultValue = "0") int page, @RequestParam(value = "kw", defaultValue = "") String kw) {
+        Object userRoleError = request.getSession().getAttribute("userRoleError");
+        if (userRoleError != null) {
+            model.addAttribute("userRoleError", userRoleError);
+            request.getSession().removeAttribute("userRoleError"); // 메시지 1회성 사용 후 제거
+        }
         Page<QuestionListItemDto> paging = questionService.getList(page, kw);
         model.addAttribute("paging", paging);
         model.addAttribute("kw", kw);
@@ -48,14 +54,14 @@ public class QuestionController {
 
     // 사용자가 "질문 등록하기" 버튼을 누르면 질문 등록 form이 화면에 표시
     //! 파라미터의 QuestionForm 객체를 지우면 th:object="${questionForm}를 resolving하지 못함!
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')") // admin 아이디만 글을 작성할 수 있게 수정
     @GetMapping("/create")
     public String showQuestionForm(QuestionForm questionForm) {
         return "question_form";
     }
 
     // @Valid: Form 클래스의 필드값에 설정한 어노테이션 검증 기능이 동작
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')") // admin 아이디만 글을 작성할 수 있게 수정
     @PostMapping("/create")
     public String createQuestion(@Valid QuestionForm questionForm, BindingResult bindingResult, Principal principal) {
         // 폼 검증
