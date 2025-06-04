@@ -10,13 +10,13 @@
             <label for="username" class="form-label">사용자 ID</label> <input type="text" th:field="*{username}" class="form-control" placeholder="3자 이상 25자 이하를 입력해 주세요.">
         </div>
         <div class="mb-3">
-            <label for="password1" class="form-label">비밀번호</label> <input type="password" th:field="*{password1}" class="form-control">
+            <label for="password1" class="form-label">비밀번호</label> <input type="password" th:field="*{password1}" class="form-control" placeholder="대문자, 숫자, 특수문자를 포함해 8자 이상 20자 이하를 입력해 주세요.">
         </div>
         <div class="mb-3">
             <label for="password2" class="form-label">비밀번호 확인</label> <input type="password" th:field="*{password2}" class="form-control">
         </div>
         <div class="mb-3">
-            <label for="email" class="form-label">이메일</label> <input type="email" th:field="*{email}" class="form-control">
+            <label for="email" class="form-label">이메일</label> <input type="email" th:field="*{email}" class="form-control" placeholder="이메일 형식은 username@example.com을 지켜주세요">
         </div>
         <button type="submit" class="btn btn-primary">회원 가입</button>
     </form>
