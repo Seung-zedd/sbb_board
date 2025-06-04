@@ -77,13 +77,27 @@
     <!-- 답 변 작 성 -->
     <form th:action="@{|/answer/create/${questionDto.id}|}" th:object="${answerForm}" method="post" class="my-3 ">
         <div th:replace="~{form_errors :: formErrorsFragment}"></div>
+
+        <!-- 비로그인 사용자: disabled textarea -->
         <textarea sec:authorize="isAnonymous()" disabled th:field="*{content}" rows="10" class="form-control"
                   placeholder="로그인 후 답변을 작성해 주세요."></textarea>
+
+        <!-- 로그인 사용자: SimpleMDE 에디터 활성화 -->
         <textarea sec:authorize="isAuthenticated()" th:field="*{content}" id="markdown" class="form-control" rows="10"></textarea>
-        <input type="submit" value="답변 등록" class="btn btn-primary my-2"></form>
-</div>
-<script layout:fragment="script" type='text/javascript' th:inline="javascript">
-    // 마크다운 에디터
+
+        <!-- 로그인한 사용자만 버튼 표시 -->
+        <div sec:authorize="isAuthenticated()">
+            <input type="submit" value="답변 등록" class="btn btn-primary my-2">
+        </div>
+
+        <!-- 비로그인 사용자: 버튼 숨기고 안내 메시지 표시 -->
+        <div sec:authorize="isAnonymous()" class="my-2">
+            <button class="btn btn-secondary" disabled>답변 등록</button>
+            <span class="text-muted ms-2">로그인 후 답변을 작성할 수 있습니다.</span>
+        </div>
+    </form>
+<script th:if="${#authorization.expression('isAuthenticated()')}"  layout:fragment="script" type='text/javascript' th:inline="javascript">
+    /* 로그인한 경우에만 SimpleMDE 초기화 */
     var simplemde = new SimpleMDE({
         element: document.getElementById("markdown"),
         spellChecker: false,
