@@ -1,11 +1,10 @@
 
-
 spring:
   config:
     activate:
       on-profile: profile2
   datasource:
-    driver-class-name: # azure-rds-mysql 드라이버 입력
-    url:
-    username:
-    password:
+    driver-class-name: ${MYSQL_DRIVER_CLASS_NAME}
+    url: ${MYSQL_URL}
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}

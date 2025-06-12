@@ -28,6 +28,8 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	runtimeOnly 'com.h2database:h2:2.1.214'
+	// MySQL 드라이버 (최신 Spring Boot는 이 네이밍을 사용)
+	runtimeOnly 'com.mysql:mysql-connector-j'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	// p6spy 디펜던시 (쿼리 파라미터 출력)
 	implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0'
