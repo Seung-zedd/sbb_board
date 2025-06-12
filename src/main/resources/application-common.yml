@@ -1,0 +1,18 @@
+
+spring:
+  config:
+    activate:
+      on-profile: common
+  thymeleaf:
+    cache: false
+  # JPA
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+    #        show_sql: true // System.out에 출력
+    hibernate:
+      ddl-auto: none # 운영 서버는 none으로 한다.
+      naming:
+        physical-strategy: com.mysite.sbb.configuration.CamelCaseToSnakeAndUpperCaseStrategy
