@@ -12,21 +12,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read #This is required for actions/checkout
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Java version
+      - name: Grant execute permission to gradlew
+        run: chmod +x ./gradlew  # ✅ 필수 추가
+
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: 'gradle'
 
       - name: Build with Gradle
-        run: ./gradlew clean build
+        run: ./gradlew clean build  # ✅ 정상 실행
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
