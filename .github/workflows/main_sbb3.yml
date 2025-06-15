@@ -9,6 +9,12 @@ on:
       - main
   workflow_dispatch:
 
+env:
+  MYSQL_URL: ${{ secrets.MYSQL_URL }}
+  MYSQL_USERNAME: ${{ secrets.MYSQL_USERNAME }}
+  MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+  
+
 jobs:
   build:
     runs-on: ubuntu-latest
