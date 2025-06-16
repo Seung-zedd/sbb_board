@@ -4,7 +4,8 @@ spring:
     activate:
       on-profile: profile2
   datasource:
-    driver-class-name: ${MYSQL_DRIVER_CLASS_NAME}
+    driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${MYSQL_URL}
-    username: ${MYSQL_USERNAME}
+    username: ecuqvotiis
     password: ${MYSQL_PASSWORD}
+
