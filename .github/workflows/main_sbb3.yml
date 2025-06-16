@@ -72,5 +72,5 @@ jobs:
         with:
           app-name: 'sbb3'
           slot-name: 'Production'
-          package: './deploy-dir/*.jar'
+          package: 'deploy-dir/sbb-0.0.1-SNAPSHOT.jar'
           
