@@ -13,6 +13,12 @@ java {
 	}
 }
 
+jar {
+//	destinationDirectory = file("${project.rootDir}/Desktop/jar")
+	archivesBaseName = 'sbb'  // JAR 이름: sbb-1.0.0.jar
+}
+
+
 repositories {
 	mavenCentral()
 }
