@@ -37,7 +37,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: java-app
-          path: '${{ github.workspace }}/build/libs/*.jar'
+          path: build/libs/*.jar
 
   deploy:
     runs-on: ubuntu-latest
@@ -54,6 +54,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: java-app
+          path: ./deploy-dir  # 아티팩트 다운로드 경로 지정
+
+      - name: List JAR files in deploy-dir  # ✅ JAR 파일 존재 확인
+        run: ls -l ./deploy-dir
       
       - name: Login to Azure
         uses: azure/login@v2
@@ -68,5 +72,5 @@ jobs:
         with:
           app-name: 'sbb3'
           slot-name: 'Production'
-          package: 'build/libs/*.jar'
+          package: './deploy-dir/*.jar'
           
