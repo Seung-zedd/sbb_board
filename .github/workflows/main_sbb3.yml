@@ -13,6 +13,7 @@ env:
   MYSQL_URL: ${{ secrets.MYSQL_URL }}
   MYSQL_USERNAME: ${{ secrets.MYSQL_USERNAME }}
   MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+  MYSQL_DRIVER_CLASS_NAME: ${{ secrets.MYSQL_DRIVER_CLASS_NAME }}
   
 
 jobs:
