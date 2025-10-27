@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  mysql-performance-test:
+    image: mysql:8.0
+    container_name: sbb-performance-test-db
+    environment:
+      MYSQL_ROOT_PASSWORD: test1234
+      MYSQL_DATABASE: sbb_performance
+      MYSQL_USER: sbb_test
+      MYSQL_PASSWORD: sbb_test1234
+    ports:
+      - "3307:3306"  # 기존 MySQL과 충돌 방지를 위해 3307 포트 사용
+    volumes:
+      - mysql-performance-data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_connections=500
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql-performance-data:
+    driver: local
