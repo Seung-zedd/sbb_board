@@ -59,7 +59,7 @@ class QueryPerformanceTest {
     }
 
     /**
-     * 테스트 0: 더미 데이터 생성
+     * 테스트 1: 더미 데이터 생성
      * 최초 1회만 실행 (수동으로 @Disabled 제거 후 실행)
      */
     @Test

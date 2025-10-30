@@ -22,6 +22,31 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - sbb-network
+
+  # Spring Boot Application (uncomment to run with docker-compose)
+  # sbb-app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: sbb-app
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: performance
+  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql-performance-test:3306/sbb_performance?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+  #     SPRING_DATASOURCE_USERNAME: sbb_test
+  #     SPRING_DATASOURCE_PASSWORD: sbb_test1234
+  #   depends_on:
+  #     mysql-performance-test:
+  #       condition: service_healthy
+  #   networks:
+  #     - sbb-network
+
+networks:
+  sbb-network:
+    driver: bridge
 
 volumes:
   mysql-performance-data:

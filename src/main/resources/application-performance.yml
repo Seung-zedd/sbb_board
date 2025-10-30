@@ -26,11 +26,15 @@ spring:
         format_sql: true
         use_sql_comments: true
         default_batch_fetch_size: 100  # 배치 사이즈 설정
+        jdbc:
+          batch_size: 100 # Enable JDBC batching
+          order_inserts: true  # Group inserts by entity
+          order_updates: true  # Group updates by entity
     show-sql: false  # P6Spy로 로깅하므로 false
 
 # Logging
 logging:
   level:
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.SQL: INFO # Change from DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: INFO  # Change from TRACE
     com.mysite.sbb: DEBUG
