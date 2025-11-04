@@ -64,7 +64,7 @@ class QueryPerformanceTest {
      */
     @Test
     @Order(0)
-    @Disabled("더미 데이터 생성용 - 필요 시 주석 해제")
+    // @Disabled("더미 데이터 생성용 - 필요 시 주석 해제")
     void generateDummyData() {
         dummyDataGenerator.deleteAll();
         dummyDataGenerator.generateAll();
@@ -108,7 +108,7 @@ class QueryPerformanceTest {
                 .orElse(0.0);
 
         log.info("\n[Semi Join 최종 결과]");
-        log.info("  - 평균 실행 시간: {:.2f}ms", avgTime);
+        log.info(String.format("  - 평균 실행 시간: %.2fms", avgTime));
         log.info("  - 최소 실행 시간: {}ms", executionTimes.stream().min(Long::compareTo).orElse(0L));
         log.info("  - 최대 실행 시간: {}ms", executionTimes.stream().max(Long::compareTo).orElse(0L));
     }
@@ -151,7 +151,7 @@ class QueryPerformanceTest {
                 .orElse(0.0);
 
         log.info("\n[Fetch Join 최종 결과]");
-        log.info("  - 평균 실행 시간: {:.2f}ms", avgTime);
+        log.info(String.format("  - 평균 실행 시간: %.2fms", avgTime));
         log.info("  - 최소 실행 시간: {}ms", executionTimes.stream().min(Long::compareTo).orElse(0L));
         log.info("  - 최대 실행 시간: {}ms", executionTimes.stream().max(Long::compareTo).orElse(0L));
     }
@@ -195,7 +195,7 @@ class QueryPerformanceTest {
                 .orElse(0.0);
 
         log.info("\n[Lazy Loading 최종 결과]");
-        log.info("  - 평균 실행 시간: {:.2f}ms", avgTime);
+        log.info(String.format("  - 평균 실행 시간: %.2fms", avgTime));
         log.info("  - 최소 실행 시간: {}ms", executionTimes.stream().min(Long::compareTo).orElse(0L));
         log.info("  - 최대 실행 시간: {}ms", executionTimes.stream().max(Long::compareTo).orElse(0L));
     }
@@ -238,11 +238,11 @@ class QueryPerformanceTest {
         if (semiJoinResult.executionTime < fetchJoinResult.executionTime) {
             double improvement = ((double)(fetchJoinResult.executionTime - semiJoinResult.executionTime)
                     / fetchJoinResult.executionTime) * 100;
-            log.info("✅ Semi Join이 Fetch Join 대비 {:.1f}% 빠릅니다!", improvement);
+            log.info(String.format("✅ Semi Join이 Fetch Join 대비 %.1f%% 빠릅니다!", improvement));
         } else {
             double degradation = ((double)(semiJoinResult.executionTime - fetchJoinResult.executionTime)
                     / semiJoinResult.executionTime) * 100;
-            log.info("⚠️ Fetch Join이 Semi Join 대비 {:.1f}% 빠릅니다.", degradation);
+            log.info(String.format("⚠️ Fetch Join이 Semi Join 대비 %.1f%% 빠릅니다.", degradation));
         }
 
         log.info("쿼리 횟수: Semi Join {}회 vs Fetch Join {}회", semiJoinResult.queryCount, fetchJoinResult.queryCount);
