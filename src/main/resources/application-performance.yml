@@ -2,12 +2,12 @@ spring:
   config:
     activate:
       on-profile: performance
-  # DataSource - Docker MySQL
+  # DataSource - Local MySQL
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3307/sbb_performance?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: sbb_test
-    password: sbb_test1234
+    url: jdbc:mysql://localhost:3306/sbb_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci
+    username: sbbtest
+    password: test1234
     hikari:
       maximum-pool-size: 20
       minimum-idle: 10
@@ -18,16 +18,15 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: create  # 테스트 시작 시 스키마 자동 생성
+      ddl-auto: create-drop  # 테스트 완료 후 자동 정리로 1K→5K→10K 간 깨끗한 격리 보장
       naming:
         physical-strategy: com.mysite.sbb.configuration.CamelCaseToSnakeAndUpperCaseStrategy
     properties:
       hibernate:
         format_sql: true
         use_sql_comments: true
-        default_batch_fetch_size: 100  # 배치 사이즈 설정
         jdbc:
-          batch_size: 100 # Enable JDBC batching
+          batch_size: 500  # Match the largest batch in DummyDataGenerator
           order_inserts: true  # Group inserts by entity
           order_updates: true  # Group updates by entity
     show-sql: false  # P6Spy로 로깅하므로 false

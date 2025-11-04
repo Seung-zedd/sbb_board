@@ -1,3 +1,5 @@
+# used Local MySQL since it didn't work via Docker
+
 version: '3.8'
 
 services:

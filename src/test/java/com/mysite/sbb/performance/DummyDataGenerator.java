@@ -19,10 +19,15 @@ import java.util.Random;
 /**
  * 성능 테스트용 더미 데이터 생성기
  *
- * 데이터 규모:
+ * 현재 설정: 5K 데이터셋
  * - 사용자: 1,000명
- * - 질문: 10,000개
- * - 답변: 평균 10개/질문 (총 약 100,000개)
+ * - 질문: 5,000개
+ * - 답변: 평균 10개/질문 (총 약 50,000개)
+ *
+ * 다른 데이터셋 테스트 시 generateQuestions() 파라미터 변경:
+ * - 1K: generateQuestions(1000, users)
+ * - 5K: generateQuestions(5000, users)
+ * - 10K: generateQuestions(10000, users)
  */
 @Slf4j
 @Component
@@ -50,8 +55,9 @@ public class DummyDataGenerator {
         log.info("사용자 {} 명 생성 완료", users.size());
 
         // 2. 질문 생성
+        //* 다른 더미 데이터셋으로 테스트를 하고 싶으면 generateQuestions의 count 인자를 바꿀 것
         log.info("질문 생성 중...");
-        List<Question> questions = generateQuestions(10000, users);
+        List<Question> questions = generateQuestions(5000, users);
         log.info("질문 {} 개 생성 완료", questions.size());
 
         // 3. 답변 생성
