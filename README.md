@@ -5,7 +5,6 @@
 
 - **개발 기간**: 2025.03 - 2025.06 (성능 테스트: 2025.11)
 - **기술 스택**: Java, Spring Boot, Spring Data JPA, H2 Database, Thymeleaf
-- **저장소**: https://github.com/Seung-zedd/sbb_board
 
 ---
 
