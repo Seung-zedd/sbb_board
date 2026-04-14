@@ -1,0 +1,14 @@
+global:
+  scrape_interval: 5s       # 5초마다 메트릭 수집
+  evaluation_interval: 5s
+
+scrape_configs:
+  # Spring Boot Actuator 메트릭 수집
+  - job_name: 'sbb-spring-boot'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8080']  # Docker에서 호스트 머신 접근
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'sbb-app'
