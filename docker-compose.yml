@@ -27,6 +27,39 @@ services:
     networks:
       - sbb-network
 
+  # ── 관찰 가능성 스택 (k6 부하 테스트용) ──────────────────────────────
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sbb-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-remote-write-receiver'  # k6 → Prometheus 직접 push 허용
+    networks:
+      - sbb-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sbb-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - sbb-network
+
   # Spring Boot Application (uncomment to run with docker-compose)
   # sbb-app:
   #   build:
@@ -36,7 +69,7 @@ services:
   #   ports:
   #     - "8080:8080"
   #   environment:
-  #     SPRING_PROFILES_ACTIVE: performance
+  #     SPRING_PROFILES_ACTIVE: loadtest
   #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql-performance-test:3306/sbb_performance?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
   #     SPRING_DATASOURCE_USERNAME: sbb_test
   #     SPRING_DATASOURCE_PASSWORD: sbb_test1234
@@ -52,4 +85,8 @@ networks:
 
 volumes:
   mysql-performance-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
     driver: local

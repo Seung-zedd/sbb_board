@@ -46,6 +46,10 @@ dependencies {
 	implementation 'org.commonmark:commonmark-ext-gfm-tables:0.24.0' // 표 지원
 	implementation 'org.commonmark:commonmark-ext-autolink:0.24.0' // 자동 링크 변환 지원
 
+	// Actuator + Prometheus (부하 테스트 관찰 가능성)
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.projectlombok:lombok'
