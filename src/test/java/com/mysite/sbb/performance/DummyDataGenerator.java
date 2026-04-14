@@ -57,7 +57,7 @@ public class DummyDataGenerator {
         // 2. 질문 생성
         //* 다른 더미 데이터셋으로 테스트를 하고 싶으면 generateQuestions의 count 인자를 바꿀 것
         log.info("질문 생성 중...");
-        List<Question> questions = generateQuestions(5000, users);
+        List<Question> questions = generateQuestions(10000, users);
         log.info("질문 {} 개 생성 완료", questions.size());
 
         // 3. 답변 생성
