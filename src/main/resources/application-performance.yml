@@ -18,7 +18,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: create-drop  # 테스트 완료 후 자동 정리로 1K→5K→10K 간 깨끗한 격리 보장
+      ddl-auto: create  # Phase 3 loadtest: 데이터 생성 후 loadtest 프로파일에서 재사용
       naming:
         physical-strategy: com.mysite.sbb.configuration.CamelCaseToSnakeAndUpperCaseStrategy
     properties:

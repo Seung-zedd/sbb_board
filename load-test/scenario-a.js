@@ -27,7 +27,7 @@ export const options = {
     { duration: '30s', target: 0 },    // 쿨다운
   ],
   thresholds: {
-    'scenario_a_search_duration{p(95)}': ['value<3000'],
+    'scenario_a_search_duration': ['p(95)<3000'],
     scenario_a_error_rate: ['rate<0.05'],
   },
 };
@@ -88,17 +88,20 @@ export function handleSummary(data) {
   const rps = data.metrics.http_reqs;
   const err = data.metrics.scenario_a_error_rate;
 
+  const fmt = (v) => v != null ? v.toFixed(0) : 'N/A';
+  const fmtRate = (v) => v != null ? v.toFixed(1) : 'N/A';
+
   return {
     stdout: `
 ==========================================================
   Phase 3 시나리오 A — 다중 조건 복합 검색
 ==========================================================
-  총 요청 수:   ${rps?.values.count ?? 'N/A'}
-  TPS:          ${rps?.values.rate.toFixed(1) ?? 'N/A'} req/s
-  P50:          ${dur?.values['p(50)'].toFixed(0) ?? 'N/A'}ms
-  P95:          ${dur?.values['p(95)'].toFixed(0) ?? 'N/A'}ms
-  P99:          ${dur?.values['p(99)'].toFixed(0) ?? 'N/A'}ms
-  최소/최대:    ${dur?.values.min.toFixed(0) ?? 'N/A'}ms / ${dur?.values.max.toFixed(0) ?? 'N/A'}ms
+  총 요청 수:   ${rps?.values?.count ?? 'N/A'}
+  TPS:          ${fmtRate(rps?.values?.rate)} req/s
+  P50:          ${fmt(dur?.values?.['p(50)'])}ms
+  P95:          ${fmt(dur?.values?.['p(95)'])}ms
+  P99:          ${fmt(dur?.values?.['p(99)'])}ms
+  최소/최대:    ${fmt(dur?.values?.min)}ms / ${fmt(dur?.values?.max)}ms
   에러율:       ${err ? (err.values.rate * 100).toFixed(2) : '0.00'}%
 ==========================================================
 `,

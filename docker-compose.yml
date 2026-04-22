@@ -8,11 +8,11 @@ services:
     container_name: sbb-performance-test-db
     environment:
       MYSQL_ROOT_PASSWORD: test1234
-      MYSQL_DATABASE: sbb_performance
-      MYSQL_USER: sbb_test
-      MYSQL_PASSWORD: sbb_test1234
+      MYSQL_DATABASE: sbb_db
+      MYSQL_USER: sbbtest
+      MYSQL_PASSWORD: test1234
     ports:
-      - "3307:3306"  # 기존 MySQL과 충돌 방지를 위해 3307 포트 사용
+      - "3306:3306"
     volumes:
       - mysql-performance-data:/var/lib/mysql
     command:
