@@ -30,7 +30,7 @@ export const options = {
     { duration: '30s', target: 0 },
   ],
   thresholds: {
-    'scenario_b_trending_duration{p(95)}': ['value<500'],   // 배치: P95 < 500ms 기대
+    'scenario_b_trending_duration': ['p(95)<500'],   // 배치: P95 < 500ms 기대
     scenario_b_error_rate: ['rate<0.05'],
   },
 };
