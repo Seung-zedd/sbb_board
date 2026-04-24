@@ -38,8 +38,8 @@ public class QuestionService {
             // 검색어가 없으면 전체 조회
             questionPage = questionRepository.findAll(pageable);
         } else {
-            // 검색어가 있으면 검색
-            questionPage = questionRepository.findAllByKeyword(kw, pageable);
+            // 검색어가 있으면 FULLTEXT 인덱스 검색
+            questionPage = questionRepository.findAllByKeywordWithFulltext(kw, pageable);
         }
 
         return questionPage.map(QuestionListItemDto::from);
