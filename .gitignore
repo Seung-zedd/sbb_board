@@ -40,3 +40,8 @@ out/
 ### Claude Code ###
 .claude/
 CLAUDE.md
+
+# Phase 3 report and assets
+/docs/phase3_load_test_report.md
+/assets/images/scenario_a/
+/assets/images/scenario_b/
