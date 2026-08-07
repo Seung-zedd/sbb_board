@@ -45,3 +45,6 @@ CLAUDE.md
 /docs/phase3_load_test_report.md
 /assets/images/scenario_a/
 /assets/images/scenario_b/
+
+# HikariCP pool experiment — raw p6spy app logs (100MB+, exceeds GitHub's 100MB file limit)
+results/app_*.log

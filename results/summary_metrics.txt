@@ -1,0 +1,85 @@
+HikariCP Pool Experiment — computed metrics per run
+(acquire/usage avg = before/after Prometheus counter delta; pending/active from 1s timeseries poller)
+
+## Run 1 — pool=20 (기본값)
+k6: total_requests=8663  TPS=48.0  P50=N/A  P95=1726ms  P99=N/A  min/max=11ms/4621ms  error_rate=50.73%
+acquire_avg_ms=334.36  (count_delta=8663 sum_delta=2896.5606s)
+usage_avg_ms=289.95    (count_delta=8663 sum_delta=2511.8530s)
+timeout_total_delta=0
+pending: peak=62.0 (at 21:27:42)  mean_during_active=13.49
+active:  peak=20.0 (= pool size, fully saturated)  mean_during_active=13.10
+run window (approx): poller started 21:23:53, k6 finished ~21:28:12
+
+## Run 2 — pool=40 (2배)
+k6: total_requests=6564  TPS=36.3  P95=2235ms  min/max=20ms/14372ms  error_rate=50.00%
+acquire_avg_ms=195.57  (count_delta=6564 sum_delta=1283.7266s)
+usage_avg_ms=666.00    (count_delta=6564 sum_delta=4371.6390s)
+timeout_total_delta=0
+pending: peak=56.0  mean_during_active=7.31
+active:  peak=40.0 (= pool size, fully saturated AGAIN)  mean_during_active=22.77
+
+>>> KEY OBSERVATION: pool doubled but still hit 100% saturation (active peak = pool size).
+>>> acquire time DROPPED (334→196ms) but usage time TRIPLED-ish (290→666ms).
+>>> Net effect: TPS dropped (48.0→36.3), P95 got WORSE (1726→2235ms), error rate unchanged (~50%).
+>>> This points to the bottleneck being DB-side query execution under concurrency, not pool wait.
+
+## Run 3 — pool=80 (4배)
+k6: total_requests=6901  TPS=38.2  P95=2618ms  min/max=19ms/5483ms  error_rate=51.75%
+acquire_avg_ms=10.39   (count_delta=6901 sum_delta=71.7183s)
+usage_avg_ms=812.66    (count_delta=6901 sum_delta=5608.1620s)
+timeout_total_delta=0
+pending: peak=5.0  mean_during_active=0.18   (연결 대기가 사실상 사라짐)
+active:  peak=80.0 (= pool size)  mean_during_active=28.00
+
+>>> TREND ACROSS RUNS 1→2→3 (pool 20→40→80):
+>>>   acquire_avg_ms: 334.36 → 195.57 → 10.39   (monotonic decrease, wait nearly eliminated)
+>>>   usage_avg_ms:   289.95 → 666.00 → 812.66  (monotonic INCREASE, ~2.8x)
+>>>   pending_peak:   62 → 56 → 5               (queueing relieved)
+>>>   TPS:            48.0 → 36.3 → 38.2        (WORSE, never recovers to pool20 level)
+>>>   P95:             1726 → 2235 → 2618ms      (monotonically WORSE)
+>>>   error_rate:      50.73% → 50.00% → 51.75%  (flat/slightly worse, never approaches <5%)
+>>> Connection wait was real but small relative to usage. Removing the wait (pool↑) simply
+>>> shifted load onto the DB, where each connection's query execution takes longer under
+>>> higher concurrency. Net effect on user-facing latency/error-rate is NEGATIVE.
+
+## Run 4 — pool=20 (재현, 노이즈 기준선)
+k6: total_requests=10627  TPS=58.9  P95=1104ms  min/max=10ms/6336ms  error_rate=51.02%
+acquire_avg_ms=238.24  (count_delta=10627 sum_delta=2531.7316s)
+usage_avg_ms=229.65    (count_delta=10627 sum_delta=2440.5280s)
+timeout_total_delta=0
+pending: peak=55.0  mean_during_active=13.44
+active:  peak=20.0 (= pool size, fully saturated)  mean_during_active=12.79
+
+## Run1 vs Run4 (같은 pool=20) — 측정 노이즈 폭
+TPS:          48.0  vs 58.9   (diff ~11, ~+23%)
+P95:          1726  vs 1104ms (diff ~620ms)
+error_rate:   50.73 vs 51.02% (diff 0.29pp)  <-- 매우 안정적
+acquire_avg:  334.36 vs 238.24ms
+usage_avg:    289.95 vs 229.65ms
+pending_peak: 62 vs 55
+active_peak:  20 vs 20 (always saturated)
+
+## FINAL CROSS-RUN TABLE
+pool | TPS  | P95(ms) | error_rate | acquire_avg(ms) | usage_avg(ms) | pending_peak | active_peak | timeout
+20   | 48.0 | 1726    | 50.73%     | 334.36           | 289.95        | 62            | 20 (100%)    | 0
+40   | 36.3 | 2235    | 50.00%     | 195.57           | 666.00        | 56            | 40 (100%)    | 0
+80   | 38.2 | 2618    | 51.75%     | 10.39            | 812.66        | 5             | 80 (100%)    | 0
+20*  | 58.9 | 1104    | 51.02%     | 238.24           | 229.65        | 55            | 20 (100%)    | 0
+(*재현/노이즈 기준선)
+
+## VERDICT
+- error_rate는 pool 20/40/80/20* 전 구간에서 50.00~51.75% (폭 1.75pp) — 같은 pool=20을 두 번 돌린
+  노이즈 폭(0.29pp)보다는 크지만, threshold(rate<0.05=5%)에는 조금도 접근하지 못함.
+  즉 pool을 4배로 늘려도 에러율은 사실상 그대로. => 가설 반증.
+- acquire_avg는 pool이 커질수록 단조 감소 (334→196→10ms, 재현 238ms) — 대기 이론대로 정상 동작.
+  즉 "커넥션 대기"는 실재했고 pool을 늘리면 실제로 사라진다 (pending_peak 62→56→5).
+- 그런데 usage_avg는 반대로 단조 증가 (290→666→813ms, 재현 230ms) — pool을 키울수록
+  커넥션 하나를 붙잡고 있는 시간(=쿼리 실행+처리 시간)이 급격히 길어짐.
+  active_peak는 모든 회차에서 pool 크기와 정확히 같음 (=항상 100% 포화) — pool을 늘려도
+  "포화되지 않는" 상태로는 가지 않음, 포화선 자체가 밀려날 뿐.
+- 결론: 대기(acquire)를 없애는 데는 성공했지만, 그로 인해 늘어난 동시 쿼리가 DB 실행 시간(usage)을
+  더 크게 늘려 상쇄했다. TPS/P95도 pool을 키울수록 오히려 악화 (48.0→36.3→38.2 req/s,
+  1726→2235→2618ms) — 이건 노이즈 폭(pool20 반복시 diff ~11 TPS, ~620ms)을 넘어서는 실제 열화.
+- HikariCP 풀 포화는 "쿼리 병목이 아니라 시스템 자원 병목"이라는 원래 README 서술과 달리,
+  이번 대조 실험 결과는 병목이 풀 그 자체가 아니라 그 뒤의 DB 쪽 실행 능력(동시성 하에서의
+  쿼리 처리)에 있음을 가리킨다. 풀 사이즈 튜닝만으로는 해결되지 않는다.

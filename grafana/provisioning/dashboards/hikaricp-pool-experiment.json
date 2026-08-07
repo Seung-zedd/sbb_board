@@ -1,0 +1,45 @@
+{
+  "title": "HikariCP Pool Experiment (scenario A)",
+  "uid": "hikaricp-pool-experiment",
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "1. Connections Pending / Active / Max",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "hikaricp_connections_pending{application=\"sbb\"}", "legendFormat": "pending", "refId": "A" },
+        { "expr": "hikaricp_connections_active{application=\"sbb\"}", "legendFormat": "active", "refId": "B" },
+        { "expr": "hikaricp_connections_max{application=\"sbb\"}", "legendFormat": "max (pool size)", "refId": "C" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "2. Acquire Time (avg over 30s window)",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "rate(hikaricp_connections_acquire_seconds_sum{application=\"sbb\"}[30s]) / rate(hikaricp_connections_acquire_seconds_count{application=\"sbb\"}[30s])", "legendFormat": "acquire avg", "refId": "A" },
+        { "expr": "hikaricp_connections_acquire_seconds_max{application=\"sbb\"}", "legendFormat": "acquire max", "refId": "B" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "3. Usage Time (avg over 30s window)",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "rate(hikaricp_connections_usage_seconds_sum{application=\"sbb\"}[30s]) / rate(hikaricp_connections_usage_seconds_count{application=\"sbb\"}[30s])", "legendFormat": "usage avg", "refId": "A" },
+        { "expr": "hikaricp_connections_usage_seconds_max{application=\"sbb\"}", "legendFormat": "usage max", "refId": "B" }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "version": 1
+}

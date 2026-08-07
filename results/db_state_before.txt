@@ -1,0 +1,28 @@
+DB baseline snapshot — before pool experiment
+Checked: 2026-08-07 (container sbb-performance-test-db, mysql:8.0.46)
+
+=== Row counts ===
+QUESTION_count  ANSWER_count  SITE_USER_count
+10000           124835        1000
+
+=== SHOW INDEX FROM QUESTION ===
+Table     Non_unique  Key_name                       Seq_in_index  Column_name  Index_type
+QUESTION  0           PRIMARY                        1             ID           BTREE
+QUESTION  1           FKpllt6xnsb7fel85utr6xsa2nq     1             AUTHOR_ID    BTREE
+QUESTION  1           idx_question_covering           1             CREATE_DATE  BTREE
+QUESTION  1           idx_question_covering           2             ID           BTREE
+QUESTION  1           idx_question_covering           3             SUBJECT      BTREE
+QUESTION  1           idx_question_covering           4             AUTHOR_ID    BTREE
+QUESTION  1           ft_idx_question_search          1             SUBJECT      FULLTEXT
+QUESTION  1           ft_idx_question_search          2             CONTENT      FULLTEXT
+
+=== SHOW INDEX FROM ANSWER ===
+Table   Non_unique  Key_name                       Seq_in_index  Column_name  Index_type
+ANSWER  0           PRIMARY                        1             ID           BTREE
+ANSWER  1           FKnhbd8h3mtha816xvkly4ge902     1             AUTHOR_ID    BTREE
+ANSWER  1           FKl49sk30wrfoteigkl5w76dqhy     1             QUESTION_ID  BTREE
+ANSWER  1           ft_idx_answer_content           1             CONTENT      FULLTEXT
+
+=== max_connections ===
+Variable_name   Value
+max_connections 500
