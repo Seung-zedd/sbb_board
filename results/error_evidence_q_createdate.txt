@@ -1,0 +1,39 @@
+# Phase 4 증거 — scenario_a_error_rate 50%의 실제 원인
+# 추출일: 2026-08-08 / 원본: results/app_pool*.log (총 571MB, 별도 보관 후 삭제 예정)
+# 원인: findAllByKeywordWithFulltext(네이티브 쿼리)의 하드코딩된 ORDER BY 뒤에
+#       Pageable의 Sort(createDate)가 중복 append되어 MySQL 1054 발생 -> HTTP 500
+
+## 회차별 발생 건수 (에러 1건당 로그 3줄: SqlExceptionHelper WARN + ERROR + dispatcherServlet ERROR)
+app_pool20.log                      13134 lines  (~4378 requests)
+app_pool40.log                       9714 lines  (~3238 requests)
+app_pool80.log                      10296 lines  (~3432 requests)
+app_pool20_repro.log                16260 lines  (~5420 requests)
+
+## 대조: k6가 보고한 실패 요청 수
+pool20      : 8663 req x 50.73% = 4394
+pool40      : 6564 req x 50.00% = 3282
+pool80      : 6901 req x 51.75% = 3571
+pool20_repro: 10627 req x 51.02% = 5422
+
+## scenario-a.js 가중치 (kw='' 50 : keyword 50) — 키워드 검색 경로가 100% 실패
+kw=''     : page0(30) + page1(15) + page2(5)                       = 50
+keyword   : 자바10 스프링10 JPA8 쿼리7 오류8 성능5 테스트2          = 50
+
+## 원본 스택트레이스 (app_pool20.log 최초 발생분)
+    where
+        al1_0.QUESTION_ID=9987
+2026-08-07T21:25:18.679+09:00 ERROR 11540 --- [sbb] [io-8080-exec-10] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.dao.InvalidDataAccessResourceUsageException: JDBC exception executing SQL [SELECT DISTINCT q.* FROM QUESTION q LEFT JOIN SITE_USER u1 ON q.AUTHOR_ID = u1.ID LEFT JOIN ANSWER a ON a.QUESTION_ID = q.ID LEFT JOIN SITE_USER u2 ON a.AUTHOR_ID = u2.ID WHERE MATCH(q.SUBJECT, q.CONTENT) AGAINST (? IN BOOLEAN MODE)    OR u1.USERNAME LIKE ?    OR u2.USERNAME LIKE ? ORDER BY q.CREATE_DATE DESC, q.createDate desc limit ?] [Unknown column 'q.createDate' in 'order clause'] [n/a]; SQL [n/a]] with root cause
+
+java.sql.SQLSyntaxErrorException: Unknown column 'q.createDate' in 'order clause'
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:112) ~[mysql-connector-j-9.1.0.jar!/:9.1.0]
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:114) ~[mysql-connector-j-9.1.0.jar!/:9.1.0]
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:988) ~[mysql-connector-j-9.1.0.jar!/:9.1.0]
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeQuery(ClientPreparedStatement.java:1056) ~[mysql-connector-j-9.1.0.jar!/:9.1.0]
+	at com.zaxxer.hikari.pool.ProxyPreparedStatement.executeQuery(ProxyPreparedStatement.java:52) ~[HikariCP-5.1.0.jar!/:na]
+	at com.zaxxer.hikari.pool.HikariProxyPreparedStatement.executeQuery(HikariProxyPreparedStatement.java) ~[HikariCP-5.1.0.jar!/:na]
+	at com.p6spy.engine.wrapper.PreparedStatementWrapper.executeQuery(PreparedStatementWrapper.java:78) ~[p6spy-3.9.0.jar!/:na]
+	at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.executeQuery(DeferredResultSetAccess.java:250) ~[hibernate-core-6.6.8.Final.jar!/:6.6.8.Final]
+	at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.getResultSet(DeferredResultSetAccess.java:171) ~[hibernate-core-6.6.8.Final.jar!/:6.6.8.Final]
+	at org.hibernate.sql.results.jdbc.internal.AbstractResultSetAccess.getMetaData(AbstractResultSetAccess.java:36) ~[hibernate-core-6.6.8.Final.jar!/:6.6.8.Final]
+	at org.hibernate.sql.results.jdbc.internal.AbstractResultSetAccess.getColumnCount(AbstractResultSetAccess.java:52) ~[hibernate-core-6.6.8.Final.jar!/:6.6.8.Final]
+	at org.hibernate.query.results.ResultSetMappingImpl.resolve(ResultSetMappingImpl.java:194) ~[hibernate-core-6.6.8.Final.jar!/:6.6.8.Final]
