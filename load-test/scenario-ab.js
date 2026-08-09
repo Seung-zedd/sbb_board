@@ -101,6 +101,17 @@ const SEARCH_SCENARIOS = [
   { kw: '테스트', page: 0, weight: 2 },
 ];
 
+// KW_ONLY=1 이면 빈 검색(kw='')을 제외하고 키워드 검색만 쏜다.
+//
+// 왜 필요한가: 기본 분포는 절반(weight 50/100)이 빈 검색이다. 빈 검색은
+// findAllQuestionIds 경로라 키워드 쿼리를 바꿔도 두 빌드가 완전히 같은 일을 한다.
+// 그 쌍들은 동전 던지기가 되어 승률을 50%로 끌어내린다. 즉 기본 분포의 승률은
+// "개선이 없다"가 아니라 "개선 대상이 트래픽의 절반"을 뜻한다.
+// 변경 자체가 유효한지 보려면 대상 트래픽만 떼어내서 봐야 한다.
+//
+// 최종 판단은 기본 분포(= 실제 트래픽) 쪽 숫자로 한다. KW_ONLY는 진단용이다.
+const KW_ONLY = __ENV.KW_ONLY === '1';
+
 // 가중치를 그대로 펼친 100칸 배열을 만들고, 고정 시드로 한 번만 섞는다.
 // Math.random()을 쓰지 않으므로 실행마다 같은 쿼리 순서가 재현된다.
 const SEQUENCE = buildSequence();
@@ -108,6 +119,7 @@ const SEQUENCE = buildSequence();
 function buildSequence() {
   const arr = [];
   for (const s of SEARCH_SCENARIOS) {
+    if (KW_ONLY && s.kw === '') continue;
     for (let i = 0; i < s.weight; i++) arr.push(s);
   }
   // 선형 합동 생성기(LCG)로 결정론적 Fisher-Yates 셔플
