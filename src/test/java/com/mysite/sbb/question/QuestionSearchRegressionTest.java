@@ -137,24 +137,31 @@ class QuestionSearchRegressionTest {
     }
 
     @Test
-    @DisplayName("id만 뽑는 새 UNION 쿼리가 기존 엔티티 UNION 쿼리와 같은 결과를 낸다")
+    @DisplayName("파생 테이블 JOIN 쿼리가 기존 IN 서브쿼리와 같은 결과를 낸다")
     void findQuestionIds_matchesLegacyEntityQuery() {
-        // N+1 개선에서 STEP 1을 SELECT q.* -> SELECT q.ID로 바꿨다.
-        // WHERE/UNION/ORDER BY는 그대로 두었으므로 결과 집합이 동일해야 한다.
-        // 기존 findAllByKeywordWithFulltext는 이 비교를 위해 남겨둔 것이다.
+        // STEP 1은 두 번 바뀌었다.
+        //   1) SELECT q.* -> SELECT q.ID           (N+1 제거)
+        //   2) WHERE q.ID IN (...) -> JOIN (...) t (키워드 검색 최적화, 2026-08-09)
+        // legacy(findAllByKeywordWithFulltext)는 IN 형태 그대로 남겨두었으므로
+        // 이 비교가 곧 IN <-> JOIN 동치성 검증이 된다.
+        //
+        // 2페이지까지 보는 이유: JOIN 전환은 LIMIT offset 경로의 실행계획도 바꾸므로
+        // 첫 페이지만 맞아서는 페이지네이션이 보존됐다고 말할 수 없다.
         for (String kw : List.of("테스트", "질문", "자바", "스프링", "JPA")) {
-            Page<Question> legacy = questionRepository
-                    .findAllByKeywordWithFulltext(kw, PageRequest.of(0, 10));
-            Page<Long> current = questionRepository
-                    .findQuestionIdsByKeywordWithFulltext(kw, PageRequest.of(0, 10));
+            for (int page : List.of(0, 1)) {
+                Page<Question> legacy = questionRepository
+                        .findAllByKeywordWithFulltext(kw, PageRequest.of(page, 10));
+                Page<Long> current = questionRepository
+                        .findQuestionIdsByKeywordWithFulltext(kw, PageRequest.of(page, 10));
 
-            assertThat(current.getTotalElements())
-                    .as("kw=%s 의 전체 건수", kw)
-                    .isEqualTo(legacy.getTotalElements());
+                assertThat(current.getTotalElements())
+                        .as("kw=%s 의 전체 건수", kw)
+                        .isEqualTo(legacy.getTotalElements());
 
-            assertThat(current.getContent())
-                    .as("kw=%s 의 1페이지 id 목록(순서 포함)", kw)
-                    .isEqualTo(legacy.getContent().stream().map(Question::getId).toList());
+                assertThat(current.getContent())
+                        .as("kw=%s page=%d 의 id 목록(순서 포함)", kw, page)
+                        .isEqualTo(legacy.getContent().stream().map(Question::getId).toList());
+            }
         }
     }
 

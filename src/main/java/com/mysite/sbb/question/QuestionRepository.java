@@ -98,16 +98,41 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
     Page<Long> findAllQuestionIds(Pageable pageable);
 
     /**
-     * STEP 1 (검색어 있음): findAllByKeywordWithFulltext와 동일한 UNION 조건에서
-     * SELECT 대상만 q.* -> q.ID로 바꾼 것. countQuery는 위와 완전히 동일하다.
+     * STEP 1 (검색어 있음): UNION 결과를 파생 테이블로 만들어 QUESTION과 JOIN한다.
      *
-     * 주의: 위 findAllByKeywordWithFulltext와 마찬가지로 이 쿼리도 ORDER BY를 자체 포함한다.
+     * ── IN (서브쿼리)에서 JOIN (파생 테이블)로 바꾼 이유 ──
+     *
+     * WHERE q.ID IN (...) 형태에서 MySQL은 UNION을 상관 서브쿼리로 변환한다.
+     * EXPLAIN이 DEPENDENT SUBQUERY / DEPENDENT UNION을 찍고, 바깥 q의 매 행마다
+     * UNION 세 항을 전부 다시 평가한다. MATCH AGAINST도 FULLTEXT 접근이 아니라
+     * PRIMARY eq_ref(func)로 떨어져 인덱스가 무의미해진다.
+     *
+     * 그래서 비용이 매칭 건수에 반비례한다. ORDER BY CREATE_DATE DESC LIMIT 10이
+     * 10건을 채울 때까지 q를 훑는데, 희귀 키워드일수록 훑는 행이 늘기 때문이다.
+     * 실측(2026-08-09, results/kw_join_bench.md):
+     *   자바(1475건) 4.8ms / 테스트(100건) 61.6ms / 0건 470.5ms
+     * 즉 사용자가 실제로 칠 법한 드문 검색어가 최악 케이스다.
+     *
+     * JOIN으로 바꾸면 파생 테이블이 한 번만 실체화되고 q.ID = t.ID는
+     * eq_ref(auto_distinct_key)로 붙는다. MATCH AGAINST도 fulltext 접근을 되찾는다.
+     * 비용이 매칭 건수에 비례하게 바뀌어 위 3.0~12.9ms 범위로 수렴한다.
+     * 시나리오 가중 평균(목록+count) 21.78ms -> 14.89ms (-32%).
+     *
+     * 트레이드오프: 매칭이 조밀한 키워드는 IN 쪽의 조기 종료가 유리해 소폭 손해다
+     * (자바 4.8 -> 6.5ms). 대신 최악 케이스 470ms가 사라진다. 편차 13배 -> 4배.
+     *
+     * UNION이 중복을 제거하므로 t.ID는 유일하고, 결과 집합은 IN 버전과 동일하다
+     * (QuestionSearchRegressionTest.findQuestionIds_matchesLegacyEntityQuery가 고정한다).
+     *
+     * countQuery는 원래부터 파생 테이블 형태라 바뀐 것이 없다.
+     *
+     * 주의: findAllByKeywordWithFulltext와 마찬가지로 이 쿼리도 ORDER BY를 자체 포함한다.
      * Pageable에 Sort를 실어 넘기면 프로퍼티명이 컬럼명으로 변환되지 않은 채 append되어
      * "Unknown column 'q.createDate' in 'order clause'" (MySQL 1054)가 발생한다.
      * QuestionService.getList가 Sort 없는 PageRequest를 넘기는 이유다.
      */
-    @Query(value = "SELECT q.ID FROM QUESTION q WHERE q.ID IN ("
-            + "  SELECT q2.ID FROM QUESTION q2 "
+    @Query(value = "SELECT q.ID FROM QUESTION q JOIN ("
+            + "  SELECT q2.ID AS ID FROM QUESTION q2 "
             + "   WHERE MATCH(q2.SUBJECT, q2.CONTENT) AGAINST (:kw IN BOOLEAN MODE) "
             + "  UNION "
             + "  SELECT q3.ID FROM QUESTION q3 JOIN SITE_USER u1 ON q3.AUTHOR_ID = u1.ID "
@@ -115,7 +140,7 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
             + "  UNION "
             + "  SELECT a.QUESTION_ID FROM ANSWER a JOIN SITE_USER u2 ON a.AUTHOR_ID = u2.ID "
             + "   WHERE u2.USERNAME LIKE %:kw% "
-            + ") ORDER BY q.CREATE_DATE DESC",
+            + ") t ON t.ID = q.ID ORDER BY q.CREATE_DATE DESC",
             countQuery = "SELECT COUNT(*) FROM ("
             + "  SELECT q2.ID FROM QUESTION q2 "
             + "   WHERE MATCH(q2.SUBJECT, q2.CONTENT) AGAINST (:kw IN BOOLEAN MODE) "
