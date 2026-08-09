@@ -4,7 +4,11 @@ version: '3.8'
 
 services:
   mysql-performance-test:
-    image: mysql:8.0
+    # mysql:8.0에 클라이언트 문자셋 설정을 구워 넣은 이미지.
+    # 바인드 마운트로는 Windows에서 권한이 777이 되어 MySQL이 설정 파일을 무시한다.
+    build:
+      context: ./docker/mysql
+    image: sbb-mysql-utf8:8.0
     container_name: sbb-performance-test-db
     environment:
       MYSQL_ROOT_PASSWORD: test1234

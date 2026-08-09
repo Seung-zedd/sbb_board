@@ -1,0 +1,23 @@
+# MySQL 클라이언트 문자셋 고정
+#
+# docker-compose의 command: --character-set-server=utf8mb4는 mysqld에만 적용된다.
+# mysql CLI는 자기 문자셋을 컨테이너 로케일에서 추론하는데, 공식 이미지의 로케일이
+# POSIX라 latin1로 떨어진다. 그 상태에서 한글 리터럴을 넘기면
+#
+#   character_set_client = latin1
+#   -> 서버가 UTF-8 바이트를 latin1 문자로 해석
+#   -> utf8mb4 컬럼과 비교할 때 다른 문자로 변환
+#   -> MATCH AGAINST('자바')가 0건 반환 (에러 없이 조용히 틀린다)
+#
+# HEX()와 화면 출력은 바이트가 그대로 왕복하므로 정상으로 보인다.
+# 비교/검색 시점에만 드러나기 때문에 진단이 어렵다.
+# 2026-08-09에 키워드 매칭 건수 조사가 전부 0으로 나와 발견했다.
+
+[client]
+default-character-set=utf8mb4
+
+[mysql]
+default-character-set=utf8mb4
+
+[mysqldump]
+default-character-set=utf8mb4

@@ -16,7 +16,14 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Rate, Trend } from 'k6/metrics';
 
-const errorRate = new Rate('scenario_a_error_rate');
+// 지표를 셋으로 분리한다.
+//
+// 2026-08-09 이전에는 errorRate 하나가 "status != 200"과 "duration >= 3000"을 함께 셌다.
+// 그래서 에러율 40%가 찍혀도 그게 서버 장애인지 단순히 느린 것인지 구분할 수 없었다.
+// 실제로 8/9 측정 4회에서 나온 25~40%는 전부 느린 응답이었고 앱 로그 ERROR는 0건이었다.
+// 반대로 8/7의 50.73%는 진짜 500 에러(MySQL 1054)였다. 둘은 대응 방법이 완전히 다르다.
+const errorRate = new Rate('scenario_a_error_rate'); // HTTP 실패만 (status != 200)
+const slowRate = new Rate('scenario_a_slow_rate');   // SLO 위반만 (duration >= 3000ms)
 const searchDuration = new Trend('scenario_a_search_duration', true);
 
 export const options = {
@@ -28,8 +35,11 @@ export const options = {
   ],
   thresholds: {
     'scenario_a_search_duration': ['p(95)<3000'],
-    scenario_a_error_rate: ['rate<0.05'],
+    scenario_a_error_rate: ['rate<0.05'], // 서버 실패 5% 미만
+    scenario_a_slow_rate: ['rate<0.05'],  // 3초 초과 응답 5% 미만 (기존 통합 지표와 동일한 엄격도)
   },
+  // k6 기본 요약은 p(90)/p(95)만 계산해 P50/P99가 N/A로 찍혔다.
+  summaryTrendStats: ['min', 'med', 'avg', 'p(95)', 'p(99)', 'max'],
 };
 
 const BASE_URL = 'http://localhost:8080';
@@ -72,12 +82,13 @@ export default function () {
     },
   });
 
-  const success = check(res, {
+  check(res, {
     'status 200': (r) => r.status === 200,
     'response < 3s': (r) => r.timings.duration < 3000,
   });
 
-  errorRate.add(!success);
+  errorRate.add(res.status !== 200);
+  slowRate.add(res.timings.duration >= 3000);
   searchDuration.add(res.timings.duration);
 
   sleep(Math.random() * 0.5);
@@ -87,9 +98,11 @@ export function handleSummary(data) {
   const dur = data.metrics.scenario_a_search_duration;
   const rps = data.metrics.http_reqs;
   const err = data.metrics.scenario_a_error_rate;
+  const slow = data.metrics.scenario_a_slow_rate;
 
   const fmt = (v) => v != null ? v.toFixed(0) : 'N/A';
   const fmtRate = (v) => v != null ? v.toFixed(1) : 'N/A';
+  const pct = (m) => m ? (m.values.rate * 100).toFixed(2) : '0.00';
 
   return {
     stdout: `
@@ -98,11 +111,13 @@ export function handleSummary(data) {
 ==========================================================
   총 요청 수:   ${rps?.values?.count ?? 'N/A'}
   TPS:          ${fmtRate(rps?.values?.rate)} req/s
-  P50:          ${fmt(dur?.values?.['p(50)'])}ms
+  P50:          ${fmt(dur?.values?.med)}ms
   P95:          ${fmt(dur?.values?.['p(95)'])}ms
   P99:          ${fmt(dur?.values?.['p(99)'])}ms
   최소/최대:    ${fmt(dur?.values?.min)}ms / ${fmt(dur?.values?.max)}ms
-  에러율:       ${err ? (err.values.rate * 100).toFixed(2) : '0.00'}%
+  ----------------------------------------------------------
+  에러율:       ${pct(err)}%   (status != 200 — 서버 실패)
+  느린 응답율:  ${pct(slow)}%   (3초 초과 — SLO 위반)
 ==========================================================
 `,
   };
