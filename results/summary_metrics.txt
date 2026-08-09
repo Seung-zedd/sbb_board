@@ -1,3 +1,21 @@
+################################################################################
+# [폐기됨 2026-08-08] 이 파일의 VERDICT 절 결론은 무효입니다.
+#
+# 이 실험은 4회 전부, 키워드 검색 요청(트래픽의 50%)이 MySQL 1054
+# (Unknown column 'q.createDate' in 'order clause')로 100% 즉시 500을 반환하는
+# 상태에서 측정됐습니다. 예외 경로는 커넥션을 잡자마자 반납하므로 풀에 걸리는
+# 실질 압박이 실제의 절반 이하였고, error_rate가 pool 크기와 무관하게
+# 50~52%로 고정된 것도 부하 특성이 아니라 이 버그 때문입니다.
+#
+# 따라서 아래 VERDICT의 "풀 포화 가설 반증", "병목은 동시성 하의 DB 실행 시간"은
+# 잘못된 실험 조건에서 나온 결론이므로 인용하지 마십시오.
+# acquire/usage/pending/TPS/P95 원본 수치 자체는 기록으로 유효합니다.
+#
+# 버그 근거:  results/error_evidence_q_createdate.txt
+# 수정 후 재측정: results/summary_metrics_fix.txt
+# 실제 병목(OR가 FULLTEXT 인덱스를 무력화)과 해결: results/summary_metrics_union.txt
+################################################################################
+
 HikariCP Pool Experiment — computed metrics per run
 (acquire/usage avg = before/after Prometheus counter delta; pending/active from 1s timeseries poller)
 

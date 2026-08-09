@@ -29,7 +29,14 @@ spring:
           batch_size: 500  # Match the largest batch in DummyDataGenerator
           order_inserts: true  # Group inserts by entity
           order_updates: true  # Group updates by entity
-    show-sql: false  # P6Spy로 로깅하므로 false
+    show-sql: false
+
+# p6spy — 매 쿼리마다 파일 I/O가 발생해 성능 측정값에 섞인다.
+# 개발 편의(파라미터 바인딩 출력)는 dev 프로파일에서만 필요하므로 측정 프로파일에서는 끈다.
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: false
 
 # Logging
 logging:

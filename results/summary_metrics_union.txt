@@ -1,0 +1,92 @@
+Phase 4 — 키워드 검색 쿼리 OR -> UNION 전환 후 재측정
+측정일: 2026-08-08
+조건: pool=20, p6spy OFF, scenario-a.js 무변경, 데이터 동일(Q 10000 / A 125692 / U 1000)
+
+## 3회차 대조
+
+지표              | (A) 8/7 pool20 | (B) 8/8 버그수정 | (C) 8/8 UNION | threshold
+------------------|----------------|------------------|---------------|----------
+총 요청 수         | 8663           | 623              | 4667          | -
+TPS               | 48.0           | 3.1              | 25.9          | -
+P95 (ms)          | 1726           | 36528            | 2727          | < 3000  PASS
+에러율            | 50.73%         | 78.65%           | 1.54%         | < 5%    PASS
+acquire_avg (ms)  | 334.36         | 9737.94          | 850.66        | -
+usage_avg (ms)    | 289.95         | 5381.92          | 594.79        | -
+connection timeout| 0              | 14               | 0             | -
+앱 ERROR 로그     | 13134줄        | 28건             | 0건           | -
+앱 로그 크기      | 191MB          | 576KB            | 8KB           | -
+
+(A)는 트래픽의 50%가 MySQL 1054로 즉시 실패해 부하가 걸리지 않은 상태다. 수치가 좋아
+보이지만 비교 기준으로 쓸 수 없다. 실질 비교는 (B) -> (C).
+
+>>> 프로젝트 시작 이래 처음으로 k6 threshold 2개를 모두 통과했다.
+>>> (B)에서 (C)로 오며 바뀐 것은 쿼리 하나뿐이다. 데이터, 풀 사이즈, 시나리오 모두 동일.
+
+## 무엇을 바꿨나
+
+findAllByKeywordWithFulltext의 검색 조건 3개를 OR에서 UNION으로 분리했다.
+
+변경 전:
+  FROM QUESTION q
+  LEFT JOIN SITE_USER u1 ... LEFT JOIN ANSWER a ... LEFT JOIN SITE_USER u2 ...
+  WHERE MATCH(q.SUBJECT,q.CONTENT) AGAINST (:kw) OR u1.USERNAME LIKE %:kw% OR u2.USERNAME LIKE %:kw%
+
+변경 후:
+  WHERE q.ID IN (
+    SELECT q2.ID FROM QUESTION q2 WHERE MATCH(q2.SUBJECT,q2.CONTENT) AGAINST (:kw)
+    UNION SELECT q3.ID FROM QUESTION q3 JOIN SITE_USER u1 ... WHERE u1.USERNAME LIKE %:kw%
+    UNION SELECT a.QUESTION_ID FROM ANSWER a JOIN SITE_USER u2 ... WHERE u2.USERNAME LIKE %:kw%
+  )
+
+이유: OR의 한 항이 LIKE %kw%(앞 와일드카드)라 인덱스를 못 탄다. MySQL은 어차피
+전체를 봐야 한다고 판단해 MATCH AGAINST의 FULLTEXT 인덱스까지 버리고 풀스캔한다.
+EXPLAIN에서 possible_keys=NULL, type=ALL로 확인. 여기에 LEFT JOIN ANSWER가
+질문 1만 건을 12만 5천 행으로 부풀려 countQuery 한 건이 27만 행을 검사했다.
+
+즉 Phase 3에서 만든 ft_idx_question_search와 idx_question_covering은
+이번 변경 전까지 단 한 번도 사용되지 않았다.
+
+UNION으로 나누면 각 항이 자기 인덱스를 탄다. EXPLAIN에서
+"Full-text index search on q using ft_idx_question_search"와
+"Index scan on q using idx_question_covering"이 나타난다.
+
+결과 집합은 동일하다(중복은 UNION이 제거하므로 DISTINCT 불필요).
+키워드 '자바' 기준 양쪽 모두 1475건.
+
+## 쿼리 레벨 대조 (performance_schema)
+
+쿼리                    | (B) 실행/평균/검사행수     | (C) 실행/평균/검사행수    | 개선
+------------------------|---------------------------|--------------------------|------
+키워드 countQuery       | 321 / 8090ms / 271373     | 2339 / 59.7ms / 884      | 135x
+키워드 목록 쿼리        | 323 / 256ms / 6895        | 2340 / 107ms / 4993      | 2.4x
+
+단독 실행(EXPLAIN ANALYZE, 캐시 warm) 기준으로는
+  countQuery 792ms -> 6.98ms, 목록 쿼리 256ms -> 5.24ms
+
+## 병목 재배치 — 다음 타겟은 N+1
+
+(C) 회차의 DB 시간 상위:
+
+순위 | 쿼리                        | 실행횟수 | 총 시간 | 평균
+-----|-----------------------------|---------|--------|-------
+1    | 키워드 목록 (UNION)          | 2340    | 251초  | 107ms
+2    | 키워드 count (UNION)         | 2339    | 140초  | 59.7ms
+3    | 답변 조회 (N+1)              | 62796   | 131초  | 2.09ms
+4    | 작성자 조회 (N+1)            | 52519   | 101초  | 1.92ms
+5    | count kw='' (COUNT(q.ID))    | 2642    | 58.7초 | 22.2ms
+6    | 목록 kw=''                   | 2645    | 8.8초  | 3.32ms
+
+3+4위 = 115,315회 실행, 232초. 전체의 약 34%.
+
+(B) 회차에서는 N+1이 전체의 1.1%에 불과해 우선순위가 낮았으나, 1차 병목이
+제거되면서 이제 최대 후보로 올라왔다. 원인은 QuestionListItemDto.from이
+question.getAnswerList().size()를 호출해 목록 10건마다 답변 목록 전체를
+로드하는 것이다. 개선안: 답변 수를 서브쿼리/countQuery로 계산하거나
+@BatchSize 또는 fetch join 적용.
+
+## 원본 데이터
+k6: results/pool_union.txt
+HikariCP: results/metrics_union_pool20_before.txt, results/metrics_union_pool20_after.txt
+앱 로그: results/app_union_pool20.log (8KB, ERROR 0건)
+타임라인: results/run_timeline_union.txt
+이전 회차: results/summary_metrics_fix.txt, results/summary_metrics.txt(폐기 대상)

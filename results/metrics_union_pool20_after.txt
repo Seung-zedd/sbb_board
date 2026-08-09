@@ -1,0 +1,16 @@
+hikaricp_connections{application="sbb",pool="HikariPool-1"} 20.0
+hikaricp_connections_acquire_seconds_count{application="sbb",pool="HikariPool-1"} 4674
+hikaricp_connections_acquire_seconds_sum{application="sbb",pool="HikariPool-1"} 3970.0280048
+hikaricp_connections_acquire_seconds_max{application="sbb",pool="HikariPool-1"} 4.6077989
+hikaricp_connections_active{application="sbb",pool="HikariPool-1"} 0.0
+hikaricp_connections_creation_seconds_count{application="sbb",pool="HikariPool-1"} 10
+hikaricp_connections_creation_seconds_sum{application="sbb",pool="HikariPool-1"} 1.271
+hikaricp_connections_creation_seconds_max{application="sbb",pool="HikariPool-1"} 0.333
+hikaricp_connections_idle{application="sbb",pool="HikariPool-1"} 20.0
+hikaricp_connections_max{application="sbb",pool="HikariPool-1"} 20.0
+hikaricp_connections_min{application="sbb",pool="HikariPool-1"} 10.0
+hikaricp_connections_pending{application="sbb",pool="HikariPool-1"} 0.0
+hikaricp_connections_timeout_total{application="sbb",pool="HikariPool-1"} 0.0
+hikaricp_connections_usage_seconds_count{application="sbb",pool="HikariPool-1"} 4674
+hikaricp_connections_usage_seconds_sum{application="sbb",pool="HikariPool-1"} 2779.11
+hikaricp_connections_usage_seconds_max{application="sbb",pool="HikariPool-1"} 1.333

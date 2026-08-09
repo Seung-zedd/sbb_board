@@ -25,6 +25,7 @@ import java.util.List;
  * 4. 반복 테스트 평균값
  */
 @Slf4j
+@Disabled("수동 실행 전용 - performance 프로파일은 sbb_db에 ddl-auto: create를 걸어 부하 테스트 데이터를 파괴한다")
 @SpringBootTest
 @ActiveProfiles("performance")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -64,7 +65,7 @@ class QueryPerformanceTest {
      */
     @Test
     @Order(0)
-    // @Disabled("더미 데이터 생성용 - 필요 시 주석 해제")
+    @Disabled("더미 데이터 생성용 - 필요 시 주석 처리. deleteAll()로 기존 데이터를 전부 지운다")
     void generateDummyData() {
         dummyDataGenerator.deleteAll();
         dummyDataGenerator.generateAll();

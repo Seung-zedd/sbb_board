@@ -29,17 +29,18 @@ public class QuestionService {
     }
 
     public Page<QuestionListItemDto> getList(int page, String kw) {
-        List<Sort.Order> sorts = new ArrayList<>();
-        sorts.add(Sort.Order.desc("createDate"));
-        Pageable pageable = PageRequest.of(page, 10, Sort.by(sorts));
-
         Page<Question> questionPage;
         if (kw == null || kw.trim().isEmpty()) {
-            // 검색어가 없으면 전체 조회
-            questionPage = questionRepository.findAll(pageable);
+            // 검색어가 없으면 전체 조회 — JPQL 경로이므로 Sort의 프로퍼티명이 컬럼명으로 변환된다
+            List<Sort.Order> sorts = new ArrayList<>();
+            sorts.add(Sort.Order.desc("createDate"));
+            questionPage = questionRepository.findAll(PageRequest.of(page, 10, Sort.by(sorts)));
         } else {
-            // 검색어가 있으면 FULLTEXT 인덱스 검색
-            questionPage = questionRepository.findAllByKeywordWithFulltext(kw, pageable);
+            // 검색어가 있으면 FULLTEXT 인덱스 검색.
+            // findAllByKeywordWithFulltext는 네이티브 쿼리로 ORDER BY q.CREATE_DATE DESC를 이미 포함한다.
+            // 여기에 Sort를 넘기면 프로퍼티명(createDate)이 컬럼명으로 변환되지 않은 채 뒤에 append되어
+            // "Unknown column 'q.createDate' in 'order clause'" (MySQL 1054)로 500이 발생한다.
+            questionPage = questionRepository.findAllByKeywordWithFulltext(kw, PageRequest.of(page, 10));
         }
 
         return questionPage.map(QuestionListItemDto::from);
