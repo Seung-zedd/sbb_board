@@ -26,7 +26,19 @@ public class QuestionListItemDto {
         this.answerCount = answerCount;
     }
 
-    public static QuestionListItemDto from(Question question) {
+    /**
+     * 답변 수를 외부에서 주입받아 DTO를 만든다.
+     *
+     * 이전에는 from(Question) 하나만 두고 내부에서 question.getAnswerList().size()를
+     * 호출했는데, 목록 10건마다 답변 컬렉션 전체가 지연 로딩되면서 N+1이 발생했다
+     * (2026-08-08 부하 테스트에서 답변 조회 62,796회 / 131초).
+     * 여기서는 getAnswerList()를 건드리지 않는다 —
+     * 답변 수는 AnswerRepository.countByQuestionIdIn이 GROUP BY로 한 번에 집계한다.
+     *
+     * author는 QuestionRepository.findAllWithAuthorByIdIn이 JOIN FETCH로 미리 초기화하므로
+     * 여기서 getAuthor()를 호출해도 추가 쿼리가 나가지 않는다.
+     */
+    public static QuestionListItemDto from(Question question, int answerCount) {
         //* Optional로 감싼 객체를 반환할 때는 RestController를 만들어서 프론트한테 null값을 명시할 때 좋음
         if (question == null) {
             return null;
@@ -36,7 +48,7 @@ public class QuestionListItemDto {
                 .subject(question.getSubject())
                 .author(SiteUserDto.from(question.getAuthor()))
                 .createDate(question.getCreateDate())
-                .answerCount(question.getAnswerList() != null ? question.getAnswerList().size() : 0)
+                .answerCount(answerCount)
                 .build();
     }
 

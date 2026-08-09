@@ -75,4 +75,66 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
             + ") t",
             nativeQuery = true)
     Page<Question> findAllByKeywordWithFulltext(@Param("kw") String kw, Pageable pageable);
+
+    // ────────────────────────────────────────────────────────────────────
+    // N+1 제거를 위한 세미 조인 3단계 쿼리
+    //
+    // 기존에는 Page<Question>을 그대로 받아 QuestionListItemDto.from에 넘겼는데,
+    // from이 getAuthor()와 getAnswerList().size()를 건드리면서 페이지당
+    // 1 + 10(author) + 10(answerList) = 최대 21쿼리가 나갔다.
+    // 2026-08-08 부하 테스트에서 답변 조회 62,796회(131초) + 작성자 조회 52,519회(101초)로
+    // 전체 DB 시간의 34%를 차지했다 (results/summary_metrics_union.txt).
+    //
+    // STEP 1에서 id만 페이징으로 뽑고, STEP 2에서 IN 절 + JOIN FETCH로 한 번에 가져오고,
+    // STEP 3(AnswerRepository)에서 답변 수를 GROUP BY로 집계한다.
+    // 페이지 크기와 무관하게 쿼리 3회로 고정된다.
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * STEP 1 (검색어 없음): 질문 ID만 페이징 조회.
+     * JPQL이므로 Pageable에 Sort(createDate)를 실어도 컬럼명으로 정상 변환된다.
+     */
+    @Query("select q.id from Question q")
+    Page<Long> findAllQuestionIds(Pageable pageable);
+
+    /**
+     * STEP 1 (검색어 있음): findAllByKeywordWithFulltext와 동일한 UNION 조건에서
+     * SELECT 대상만 q.* -> q.ID로 바꾼 것. countQuery는 위와 완전히 동일하다.
+     *
+     * 주의: 위 findAllByKeywordWithFulltext와 마찬가지로 이 쿼리도 ORDER BY를 자체 포함한다.
+     * Pageable에 Sort를 실어 넘기면 프로퍼티명이 컬럼명으로 변환되지 않은 채 append되어
+     * "Unknown column 'q.createDate' in 'order clause'" (MySQL 1054)가 발생한다.
+     * QuestionService.getList가 Sort 없는 PageRequest를 넘기는 이유다.
+     */
+    @Query(value = "SELECT q.ID FROM QUESTION q WHERE q.ID IN ("
+            + "  SELECT q2.ID FROM QUESTION q2 "
+            + "   WHERE MATCH(q2.SUBJECT, q2.CONTENT) AGAINST (:kw IN BOOLEAN MODE) "
+            + "  UNION "
+            + "  SELECT q3.ID FROM QUESTION q3 JOIN SITE_USER u1 ON q3.AUTHOR_ID = u1.ID "
+            + "   WHERE u1.USERNAME LIKE %:kw% "
+            + "  UNION "
+            + "  SELECT a.QUESTION_ID FROM ANSWER a JOIN SITE_USER u2 ON a.AUTHOR_ID = u2.ID "
+            + "   WHERE u2.USERNAME LIKE %:kw% "
+            + ") ORDER BY q.CREATE_DATE DESC",
+            countQuery = "SELECT COUNT(*) FROM ("
+            + "  SELECT q2.ID FROM QUESTION q2 "
+            + "   WHERE MATCH(q2.SUBJECT, q2.CONTENT) AGAINST (:kw IN BOOLEAN MODE) "
+            + "  UNION "
+            + "  SELECT q3.ID FROM QUESTION q3 JOIN SITE_USER u1 ON q3.AUTHOR_ID = u1.ID "
+            + "   WHERE u1.USERNAME LIKE %:kw% "
+            + "  UNION "
+            + "  SELECT a.QUESTION_ID FROM ANSWER a JOIN SITE_USER u2 ON a.AUTHOR_ID = u2.ID "
+            + "   WHERE u2.USERNAME LIKE %:kw% "
+            + ") t",
+            nativeQuery = true)
+    Page<Long> findQuestionIdsByKeywordWithFulltext(@Param("kw") String kw, Pageable pageable);
+
+    /**
+     * STEP 2: ID 목록으로 질문 + 작성자를 한 번에 조회.
+     *
+     * ORDER BY를 반드시 유지해야 한다. IN 절은 인자 순서를 보장하지 않으므로
+     * 이게 없으면 목록 정렬이 깨진다.
+     */
+    @Query("select q from Question q join fetch q.author where q.id in :ids order by q.createDate desc")
+    List<Question> findAllWithAuthorByIdIn(@Param("ids") List<Long> ids);
 }
