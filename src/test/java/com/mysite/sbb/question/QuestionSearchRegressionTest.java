@@ -137,6 +137,28 @@ class QuestionSearchRegressionTest {
     }
 
     @Test
+    @DisplayName("id만 뽑는 새 UNION 쿼리가 기존 엔티티 UNION 쿼리와 같은 결과를 낸다")
+    void findQuestionIds_matchesLegacyEntityQuery() {
+        // N+1 개선에서 STEP 1을 SELECT q.* -> SELECT q.ID로 바꿨다.
+        // WHERE/UNION/ORDER BY는 그대로 두었으므로 결과 집합이 동일해야 한다.
+        // 기존 findAllByKeywordWithFulltext는 이 비교를 위해 남겨둔 것이다.
+        for (String kw : List.of("테스트", "질문", "자바", "스프링", "JPA")) {
+            Page<Question> legacy = questionRepository
+                    .findAllByKeywordWithFulltext(kw, PageRequest.of(0, 10));
+            Page<Long> current = questionRepository
+                    .findQuestionIdsByKeywordWithFulltext(kw, PageRequest.of(0, 10));
+
+            assertThat(current.getTotalElements())
+                    .as("kw=%s 의 전체 건수", kw)
+                    .isEqualTo(legacy.getTotalElements());
+
+            assertThat(current.getContent())
+                    .as("kw=%s 의 1페이지 id 목록(순서 포함)", kw)
+                    .isEqualTo(legacy.getContent().stream().map(Question::getId).toList());
+        }
+    }
+
+    @Test
     @DisplayName("목록 1페이지 조회가 고정된 쿼리 수로 끝난다 (N+1 재발 방지)")
     void getList_executesFixedNumberOfQueries() {
         // 개선 전: id/엔티티 조회 1 + author 프록시 10 + answerList 컬렉션 10 = 최대 21회
