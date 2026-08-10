@@ -1,0 +1,116 @@
+mysql: [Warning] Using a password on the command line interface can be insecure.
++------------------------------+
+| #                            |
++------------------------------+
+| ===== 데이터 규모 =====      |
++------------------------------+
++---------------+-------------+-----------+
+| question_rows | answer_rows | user_rows |
++---------------+-------------+-----------+
+|         10000 |      125692 |      1000 |
++---------------+-------------+-----------+
++------------------------------+
+| #                            |
++------------------------------+
+| ===== 보유 인덱스 =====      |
++------------------------------+
++------------+-----------------------------+------------+----------------------------------+
+| TABLE_NAME | INDEX_NAME                  | INDEX_TYPE | cols                             |
++------------+-----------------------------+------------+----------------------------------+
+| ANSWER     | FKl49sk30wrfoteigkl5w76dqhy | BTREE      | QUESTION_ID                      |
+| ANSWER     | FKnhbd8h3mtha816xvkly4ge902 | BTREE      | AUTHOR_ID                        |
+| ANSWER     | ft_idx_answer_content       | FULLTEXT   | CONTENT                          |
+| ANSWER     | PRIMARY                     | BTREE      | ID                               |
+| QUESTION   | FKpllt6xnsb7fel85utr6xsa2nq | BTREE      | AUTHOR_ID                        |
+| QUESTION   | ft_idx_question_search      | FULLTEXT   | SUBJECT,CONTENT                  |
+| QUESTION   | idx_question_covering       | BTREE      | CREATE_DATE,ID,SUBJECT,AUTHOR_ID |
+| QUESTION   | PRIMARY                     | BTREE      | ID                               |
+| SITE_USER  | PRIMARY                     | BTREE      | ID                               |
+| SITE_USER  | UK6gbk5vgcl4yl2pqttui8hlk0y | BTREE      | EMAIL                            |
+| SITE_USER  | UKe3k3uaygor3kxwntpd8tgxmc4 | BTREE      | USERNAME                         |
++------------+-----------------------------+------------+----------------------------------+
++-----------------------------------------------+
+| #                                             |
++-----------------------------------------------+
+| ===== (a-1) 원본 OR — 목록 쿼리 =====         |
++-----------------------------------------------+
++----+-------------+-------+------------+--------+-----------------------------+-----------------------------+---------+--------------------+------+----------+-----------------------+
+| id | select_type | table | partitions | type   | possible_keys               | key                         | key_len | ref                | rows | filtered | Extra                 |
++----+-------------+-------+------------+--------+-----------------------------+-----------------------------+---------+--------------------+------+----------+-----------------------+
+|  1 | SIMPLE      | q     | NULL       | ALL    | NULL                        | NULL                        | NULL    | NULL               | 9925 |   100.00 | Using temporary       |
+|  1 | SIMPLE      | u1    | NULL       | eq_ref | PRIMARY                     | PRIMARY                     | 8       | sbb_db.q.AUTHOR_ID |    1 |   100.00 | Distinct              |
+|  1 | SIMPLE      | a     | NULL       | ref    | FKl49sk30wrfoteigkl5w76dqhy | FKl49sk30wrfoteigkl5w76dqhy | 9       | sbb_db.q.ID        |   11 |   100.00 | Distinct              |
+|  1 | SIMPLE      | u2    | NULL       | eq_ref | PRIMARY                     | PRIMARY                     | 8       | sbb_db.a.AUTHOR_ID |    1 |   100.00 | Using where; Distinct |
++----+-------------+-------+------------+--------+-----------------------------+-----------------------------+---------+--------------------+------+----------+-----------------------+
++-----------------------------------------------------------------------------------------+
+| #                                                                                       |
++-----------------------------------------------------------------------------------------+
+| ===== (a-2) 원본 OR — count 쿼리 (전체 DB 시간의 92%를 먹던 자리) =====                 |
++-----------------------------------------------------------------------------------------+
++----+-------------+-------+------------+--------+-----------------------------+-----------------------------+---------+--------------------+------+----------+-------------+
+| id | select_type | table | partitions | type   | possible_keys               | key                         | key_len | ref                | rows | filtered | Extra       |
++----+-------------+-------+------------+--------+-----------------------------+-----------------------------+---------+--------------------+------+----------+-------------+
+|  1 | SIMPLE      | q     | NULL       | ALL    | NULL                        | NULL                        | NULL    | NULL               | 9925 |   100.00 | NULL        |
+|  1 | SIMPLE      | u1    | NULL       | eq_ref | PRIMARY                     | PRIMARY                     | 8       | sbb_db.q.AUTHOR_ID |    1 |   100.00 | NULL        |
+|  1 | SIMPLE      | a     | NULL       | ref    | FKl49sk30wrfoteigkl5w76dqhy | FKl49sk30wrfoteigkl5w76dqhy | 9       | sbb_db.q.ID        |   11 |   100.00 | NULL        |
+|  1 | SIMPLE      | u2    | NULL       | eq_ref | PRIMARY                     | PRIMARY                     | 8       | sbb_db.a.AUTHOR_ID |    1 |   100.00 | Using where |
++----+-------------+-------+------------+--------+-----------------------------+-----------------------------+---------+--------------------+------+----------+-------------+
++------------------------------------------------+
+| #                                              |
++------------------------------------------------+
+| ===== (b-1) UNION + IN — 목록 쿼리 =====       |
++------------------------------------------------+
++----+--------------------+--------------+------------+--------+---------------------------------------------------------+-----------------------------+---------+---------------------+------+----------+--------------------------+
+| id | select_type        | table        | partitions | type   | possible_keys                                           | key                         | key_len | ref                 | rows | filtered | Extra                    |
++----+--------------------+--------------+------------+--------+---------------------------------------------------------+-----------------------------+---------+---------------------+------+----------+--------------------------+
+|  1 | PRIMARY            | q            | NULL       | index  | NULL                                                    | idx_question_covering       | 829     | NULL                |   10 |   100.00 | Using where; Using index |
+|  2 | DEPENDENT SUBQUERY | q2           | NULL       | eq_ref | PRIMARY,ft_idx_question_search                          | PRIMARY                     | 8       | func                |    1 |    11.11 | Using where              |
+|  3 | DEPENDENT UNION    | q3           | NULL       | eq_ref | PRIMARY,FKpllt6xnsb7fel85utr6xsa2nq                     | PRIMARY                     | 8       | func                |    1 |   100.00 | Using where              |
+|  3 | DEPENDENT UNION    | u1           | NULL       | eq_ref | PRIMARY                                                 | PRIMARY                     | 8       | sbb_db.q3.AUTHOR_ID |    1 |    11.11 | Using where              |
+|  4 | DEPENDENT UNION    | a            | NULL       | ref    | FKnhbd8h3mtha816xvkly4ge902,FKl49sk30wrfoteigkl5w76dqhy | FKl49sk30wrfoteigkl5w76dqhy | 9       | func                |   11 |   100.00 | Using where              |
+|  4 | DEPENDENT UNION    | u2           | NULL       | eq_ref | PRIMARY                                                 | PRIMARY                     | 8       | sbb_db.a.AUTHOR_ID  |    1 |    11.11 | Using where              |
+|  5 | UNION RESULT       | <union2,3,4> | NULL       | ALL    | NULL                                                    | NULL                        | NULL    | NULL                | NULL |     NULL | Using temporary          |
++----+--------------------+--------------+------------+--------+---------------------------------------------------------+-----------------------------+---------+---------------------+------+----------+--------------------------+
++-------------------------------------------------------------------------------------------+
+| #                                                                                         |
++-------------------------------------------------------------------------------------------+
+| ===== (b-2) UNION — count 쿼리 (a-2 대비. 이 변경은 8/8에 이미 반영) =====                |
++-------------------------------------------------------------------------------------------+
++----+--------------+--------------+------------+----------+-----------------------------+-----------------------------+---------+--------------+-------+----------+-----------------------------------+
+| id | select_type  | table        | partitions | type     | possible_keys               | key                         | key_len | ref          | rows  | filtered | Extra                             |
++----+--------------+--------------+------------+----------+-----------------------------+-----------------------------+---------+--------------+-------+----------+-----------------------------------+
+|  1 | PRIMARY      | <derived2>   | NULL       | ALL      | NULL                        | NULL                        | NULL    | NULL         | 13916 |   100.00 | NULL                              |
+|  2 | DERIVED      | q2           | NULL       | fulltext | ft_idx_question_search      | ft_idx_question_search      | 0       | const        |     1 |   100.00 | Using where; Ft_hints: no_ranking |
+|  3 | UNION        | u1           | NULL       | index    | PRIMARY                     | UKe3k3uaygor3kxwntpd8tgxmc4 | 1023    | NULL         |  1000 |    11.11 | Using where; Using index          |
+|  3 | UNION        | q3           | NULL       | ref      | FKpllt6xnsb7fel85utr6xsa2nq | FKpllt6xnsb7fel85utr6xsa2nq | 9       | sbb_db.u1.ID |     9 |   100.00 | Using index                       |
+|  4 | UNION        | u2           | NULL       | index    | PRIMARY                     | UKe3k3uaygor3kxwntpd8tgxmc4 | 1023    | NULL         |  1000 |    11.11 | Using where; Using index          |
+|  4 | UNION        | a            | NULL       | ref      | FKnhbd8h3mtha816xvkly4ge902 | FKnhbd8h3mtha816xvkly4ge902 | 9       | sbb_db.u2.ID |   115 |   100.00 | NULL                              |
+|  5 | UNION RESULT | <union2,3,4> | NULL       | ALL      | NULL                        | NULL                        | NULL    | NULL         |  NULL |     NULL | Using temporary                   |
++----+--------------+--------------+------------+----------+-----------------------------+-----------------------------+---------+--------------+-------+----------+-----------------------------------+
++--------------------------------------------------+
+| #                                                |
++--------------------------------------------------+
+| ===== (c-1) UNION + JOIN — 목록 쿼리 =====       |
++--------------------------------------------------+
++----+--------------+--------------+------------+----------+-----------------------------+-----------------------------+---------+--------------+------+----------+-----------------------------------+
+| id | select_type  | table        | partitions | type     | possible_keys               | key                         | key_len | ref          | rows | filtered | Extra                             |
++----+--------------+--------------+------------+----------+-----------------------------+-----------------------------+---------+--------------+------+----------+-----------------------------------+
+|  1 | PRIMARY      | q            | NULL       | index    | PRIMARY                     | idx_question_covering       | 829     | NULL         |   10 |   100.00 | Using index                       |
+|  1 | PRIMARY      | <derived2>   | NULL       | eq_ref   | <auto_distinct_key>         | <auto_distinct_key>         | 9       | sbb_db.q.ID  |    1 |   100.00 | Using index                       |
+|  2 | DERIVED      | q2           | NULL       | fulltext | ft_idx_question_search      | ft_idx_question_search      | 0       | const        |    1 |   100.00 | Using where; Ft_hints: no_ranking |
+|  3 | UNION        | u1           | NULL       | index    | PRIMARY                     | UKe3k3uaygor3kxwntpd8tgxmc4 | 1023    | NULL         | 1000 |    11.11 | Using where; Using index          |
+|  3 | UNION        | q3           | NULL       | ref      | FKpllt6xnsb7fel85utr6xsa2nq | FKpllt6xnsb7fel85utr6xsa2nq | 9       | sbb_db.u1.ID |    9 |   100.00 | Using index                       |
+|  4 | UNION        | u2           | NULL       | index    | PRIMARY                     | UKe3k3uaygor3kxwntpd8tgxmc4 | 1023    | NULL         | 1000 |    11.11 | Using where; Using index          |
+|  4 | UNION        | a            | NULL       | ref      | FKnhbd8h3mtha816xvkly4ge902 | FKnhbd8h3mtha816xvkly4ge902 | 9       | sbb_db.u2.ID |  115 |   100.00 | NULL                              |
+|  5 | UNION RESULT | <union2,3,4> | NULL       | ALL      | NULL                        | NULL                        | NULL    | NULL         | NULL |     NULL | Using temporary                   |
++----+--------------+--------------+------------+----------+-----------------------------+-----------------------------+---------+--------------+------+----------+-----------------------------------+
++-------------------------------------------------------------------+
+| #                                                                 |
++-------------------------------------------------------------------+
+| ===== 결과 집합 동일성 (세 값이 같아야 한다) =====                |
++-------------------------------------------------------------------+
++------------+------------+--------------+
+| a_원본OR   | b_UNION_IN | c_UNION_JOIN |
++------------+------------+--------------+
+|       1475 |       1475 |         1475 |
++------------+------------+--------------+

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>EXPLAIN 실행계획 — 검색 쿼리 3단계 변천</title>
+<style>
+  :root{
+    --ink:#111111;
+    --gray:#6b7280;
+    --line:#e5e7eb;
+    --blue:#1d4ed8;
+    --blue-bg:#eff6ff;
+    --red:#b91c1c;
+    --red-bg:#fef2f2;
+    --amber:#92400e;
+    --amber-bg:#fffbeb;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    padding:48px 40px 96px;
+    background:#ffffff;
+    color:var(--ink);
+    font-family:"Pretendard","Malgun Gothic","맑은 고딕",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:14px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* ── 헤더 ─────────────────────────────── */
+  .doc-label{
+    font-size:12px;letter-spacing:.08em;color:var(--gray);
+    text-transform:uppercase;margin-bottom:10px;
+  }
+  h1{
+    font-size:30px;font-weight:700;margin:0 0 12px;letter-spacing:-.02em;
+  }
+  .lede{font-size:15px;color:var(--gray);margin:0 0 8px;max-width:760px}
+  .meta{font-size:12px;color:var(--gray);margin-top:16px}
+  .rule{height:1px;background:var(--line);margin:32px 0 40px;border:0}
+
+  /* ── 섹션 ─────────────────────────────── */
+  section{margin-bottom:52px;page-break-inside:avoid}
+  .chip{
+    display:inline-block;padding:4px 12px;border-radius:999px;
+    background:#f3f4f6;color:var(--gray);
+    font-size:11px;font-weight:600;letter-spacing:.04em;margin-bottom:12px;
+  }
+  .chip.blue{background:var(--blue-bg);color:var(--blue)}
+  h2{font-size:19px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{font-size:13px;color:var(--gray);margin:0 0 18px;max-width:820px}
+
+  /* ── 표 ───────────────────────────────── */
+  .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th{
+    background:#fafafa;color:var(--gray);
+    font-weight:600;text-align:left;white-space:nowrap;
+    padding:10px 12px;border-bottom:1px solid var(--line);
+    font-size:11.5px;letter-spacing:.03em;
+  }
+  td{
+    padding:9px 12px;border-bottom:1px solid #f3f4f6;
+    white-space:nowrap;
+    font-family:"D2Coding","Consolas","SFMono-Regular",Menlo,monospace;
+    font-size:12px;
+  }
+  tr:last-child td{border-bottom:0}
+  .num{text-align:right}
+  .muted{color:#c0c4cc}
+
+  /* ── 셀 강조 ──────────────────────────── */
+  .bad{background:var(--red-bg);color:var(--red);font-weight:700}
+  .good{background:var(--blue-bg);color:var(--blue);font-weight:700}
+  .warn{background:var(--amber-bg);color:var(--amber)}
+
+  /* ── 결론 한 줄 ───────────────────────── */
+  .arrow{
+    margin-top:16px;font-size:14px;font-weight:600;color:var(--ink);
+    padding-left:2px;
+  }
+  .arrow b{color:var(--blue)}
+  .arrow.neg b{color:var(--red)}
+
+  /* ── 범례 ─────────────────────────────── */
+  .legend{
+    display:flex;gap:24px;flex-wrap:wrap;
+    padding:16px 18px;border:1px solid var(--line);border-radius:6px;
+    background:#fcfcfd;font-size:12.5px;margin-bottom:40px;
+  }
+  .legend span{display:inline-flex;align-items:center;gap:8px;color:var(--gray)}
+  .swatch{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .sw-bad{background:#fecaca}
+  .sw-good{background:#bfdbfe}
+  .sw-warn{background:#fde68a}
+
+  /* ── 요약 카드 ────────────────────────── */
+  .cards{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+  .card{
+    flex:1 1 210px;border:1px solid var(--line);border-radius:6px;
+    padding:18px 20px;background:#fff;
+  }
+  .card .k{font-size:11.5px;color:var(--gray);letter-spacing:.03em;margin-bottom:8px}
+  .card .v{font-size:26px;font-weight:700;letter-spacing:-.02em}
+  .card .v.b{color:var(--blue)}
+  .card .n{font-size:12px;color:var(--gray);margin-top:6px}
+
+  footer{
+    margin-top:64px;padding-top:20px;border-top:1px solid var(--line);
+    font-size:11.5px;color:var(--gray);
+  }
+  footer code{
+    font-family:"D2Coding","Consolas",monospace;
+    background:#f6f7f9;padding:1px 5px;border-radius:3px;
+  }
+  @media print{
+    body{padding:20px}
+    section{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="doc-label">sbb_board · 검색 성능 개선</div>
+  <h1>EXPLAIN 실행계획 — 검색 쿼리 3단계 변천</h1>
+  <p class="lede">
+    통합 검색(제목·내용·질문작성자·답변내용·답변작성자)의 실행계획을
+    <b>원본 OR</b> → <b>UNION + IN</b> → <b>UNION + JOIN</b> 순으로 비교했습니다.
+    핵심은 <b>QUESTION 테이블 풀스캔이 사라졌는가</b>, 그리고
+    <b>FULLTEXT 인덱스를 옵티마이저가 실제로 선택했는가</b>입니다.
+  </p>
+  <div class="meta">MySQL 8.x · 측정일 2026-08-09 · 원본 <code>results/explain_index_miss.txt</code></div>
+
+  <hr class="rule">
+
+  <!-- 데이터 규모 -->
+  <section>
+    <span class="chip">데이터 규모</span>
+    <h2>측정 대상 데이터</h2>
+    <p class="sub">모든 실행계획은 동일한 데이터셋에서 측정했습니다.</p>
+    <div class="cards">
+      <div class="card"><div class="k">QUESTION</div><div class="v">10,000</div><div class="n">행</div></div>
+      <div class="card"><div class="k">ANSWER</div><div class="v">125,692</div><div class="n">행 · 질문당 평균 12.6</div></div>
+      <div class="card"><div class="k">SITE_USER</div><div class="v">1,000</div><div class="n">행</div></div>
+    </div>
+  </section>
+
+  <!-- 보유 인덱스 -->
+  <section>
+    <span class="chip">사전 조건</span>
+    <h2>보유 인덱스</h2>
+    <p class="sub">
+      FULLTEXT 인덱스 2개와 커버링 인덱스 1개를 미리 생성해 둔 상태입니다.
+      인덱스가 <b>존재하는 것</b>과 옵티마이저가 <b>선택하는 것</b>은 별개라는 점이 이 문서의 출발점입니다.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>TABLE_NAME</th><th>INDEX_NAME</th><th>INDEX_TYPE</th><th>컬럼</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>ANSWER</td><td>FKl49sk30wrfoteigkl5w76dqhy</td><td>BTREE</td><td>QUESTION_ID</td></tr>
+          <tr><td>ANSWER</td><td>FKnhbd8h3mtha816xvkly4ge902</td><td>BTREE</td><td>AUTHOR_ID</td></tr>
+          <tr><td>ANSWER</td><td>ft_idx_answer_content</td><td class="good">FULLTEXT</td><td>CONTENT</td></tr>
+          <tr><td>ANSWER</td><td>PRIMARY</td><td>BTREE</td><td>ID</td></tr>
+          <tr><td>QUESTION</td><td>FKpllt6xnsb7fel85utr6xsa2nq</td><td>BTREE</td><td>AUTHOR_ID</td></tr>
+          <tr><td>QUESTION</td><td>ft_idx_question_search</td><td class="good">FULLTEXT</td><td>SUBJECT, CONTENT</td></tr>
+          <tr><td>QUESTION</td><td>idx_question_covering</td><td class="good">BTREE</td><td>CREATE_DATE, ID, SUBJECT, AUTHOR_ID</td></tr>
+          <tr><td>QUESTION</td><td>PRIMARY</td><td>BTREE</td><td>ID</td></tr>
+          <tr><td>SITE_USER</td><td>PRIMARY</td><td>BTREE</td><td>ID</td></tr>
+          <tr><td>SITE_USER</td><td>UK6gbk5vgcl4yl2pqttui8hlk0y</td><td>BTREE</td><td>EMAIL</td></tr>
+          <tr><td>SITE_USER</td><td>UKe3k3uaygor3kxwntpd8tgxmc4</td><td>BTREE</td><td>USERNAME</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="legend">
+    <span><i class="swatch sw-bad"></i> 풀스캔 / 인덱스 미사용 — 개선 대상</span>
+    <span><i class="swatch sw-good"></i> 인덱스 선택됨 — 개선 결과</span>
+    <span><i class="swatch sw-warn"></i> 임시 테이블 사용</span>
+  </div>
+
+  <!-- a-1 -->
+  <section>
+    <span class="chip">(a-1) BEFORE</span>
+    <h2>원본 OR — 목록 쿼리</h2>
+    <p class="sub">
+      5개 검색 조건을 <code>OR</code>로 연결한 원본 쿼리입니다.
+      <code>possible_keys</code>가 <b>NULL</b>이라는 것은 옵티마이저가 후보 인덱스조차 찾지 못했다는 뜻입니다.
+      FULLTEXT 인덱스를 만들어 뒀지만 <code>OR</code>로 묶인 순간 전혀 쓰이지 않습니다.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>id</th><th>select_type</th><th>table</th><th>type</th><th>possible_keys</th><th>key</th><th>key_len</th><th>ref</th><th class="num">rows</th><th class="num">filtered</th><th>Extra</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td><td>SIMPLE</td><td>q</td>
+            <td class="bad">ALL</td><td class="bad">NULL</td><td class="bad">NULL</td>
+            <td class="muted">NULL</td><td class="muted">NULL</td>
+            <td class="num bad">9,925</td><td class="num">100.00</td><td class="warn">Using temporary</td>
+          </tr>
+          <tr>
+            <td>1</td><td>SIMPLE</td><td>u1</td>
+            <td>eq_ref</td><td>PRIMARY</td><td>PRIMARY</td><td>8</td><td>sbb_db.q.AUTHOR_ID</td>
+            <td class="num">1</td><td class="num">100.00</td><td>Distinct</td>
+          </tr>
+          <tr>
+            <td>1</td><td>SIMPLE</td><td>a</td>
+            <td>ref</td><td>FKl49sk30wrfoteigkl5w76dqhy</td><td>FKl49sk30wrfoteigkl5w76dqhy</td><td>9</td><td>sbb_db.q.ID</td>
+            <td class="num">11</td><td class="num">100.00</td><td>Distinct</td>
+          </tr>
+          <tr>
+            <td>1</td><td>SIMPLE</td><td>u2</td>
+            <td>eq_ref</td><td>PRIMARY</td><td>PRIMARY</td><td>8</td><td>sbb_db.a.AUTHOR_ID</td>
+            <td class="num">1</td><td class="num">100.00</td><td>Using where; Distinct</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="arrow neg">→ QUESTION 전체 <b>9,925행 풀스캔</b> 후 조인. 인덱스는 있으나 후보에조차 오르지 못함</p>
+  </section>
+
+  <!-- a-2 -->
+  <section>
+    <span class="chip">(a-2) BEFORE</span>
+    <h2>원본 OR — count 쿼리 <span style="font-weight:400;color:var(--gray);font-size:14px">· 전체 DB 시간의 92%를 차지하던 지점</span></h2>
+    <p class="sub">
+      페이지네이션의 총 건수 계산입니다. 목록 쿼리와 동일하게 풀스캔이 발생하는데,
+      <b>매 페이지 요청마다 반복 실행</b>되기 때문에 실제 병목은 이쪽이 더 컸습니다.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>id</th><th>select_type</th><th>table</th><th>type</th><th>possible_keys</th><th>key</th><th>key_len</th><th>ref</th><th class="num">rows</th><th class="num">filtered</th><th>Extra</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td><td>SIMPLE</td><td>q</td>
+            <td class="bad">ALL</td><td class="bad">NULL</td><td class="bad">NULL</td>
+            <td class="muted">NULL</td><td class="muted">NULL</td>
+            <td class="num bad">9,925</td><td class="num">100.00</td><td class="muted">NULL</td>
+          </tr>
+          <tr><td>1</td><td>SIMPLE</td><td>u1</td><td>eq_ref</td><td>PRIMARY</td><td>PRIMARY</td><td>8</td><td>sbb_db.q.AUTHOR_ID</td><td class="num">1</td><td class="num">100.00</td><td class="muted">NULL</td></tr>
+          <tr><td>1</td><td>SIMPLE</td><td>a</td><td>ref</td><td>FKl49sk30wrfoteigkl5w76dqhy</td><td>FKl49sk30wrfoteigkl5w76dqhy</td><td>9</td><td>sbb_db.q.ID</td><td class="num">11</td><td class="num">100.00</td><td class="muted">NULL</td></tr>
+          <tr><td>1</td><td>SIMPLE</td><td>u2</td><td>eq_ref</td><td>PRIMARY</td><td>PRIMARY</td><td>8</td><td>sbb_db.a.AUTHOR_ID</td><td class="num">1</td><td class="num">100.00</td><td>Using where</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="arrow neg">→ 목록과 동일한 풀스캔이 <b>페이지 요청마다 반복</b>. 전체 DB 시간의 <b>92%</b> 소비</p>
+  </section>
+
+  <!-- b-1 -->
+  <section>
+    <span class="chip blue">(b-1) 1차 개선</span>
+    <h2>UNION + IN — 목록 쿼리</h2>
+    <p class="sub">
+      <code>OR</code>를 <code>UNION</code>으로 분해해 조건별로 인덱스를 태울 수 있게 바꾸고,
+      결과를 <code>IN</code> 서브쿼리로 받았습니다.
+      QUESTION은 커버링 인덱스로 <b>10행만</b> 읽지만, 서브쿼리가
+      <b>DEPENDENT SUBQUERY</b>로 풀려 바깥 행마다 재실행되는 한계가 남습니다.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>id</th><th>select_type</th><th>table</th><th>type</th><th>possible_keys</th><th>key</th><th>key_len</th><th>ref</th><th class="num">rows</th><th class="num">filtered</th><th>Extra</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td><td>PRIMARY</td><td>q</td>
+            <td class="good">index</td><td class="muted">NULL</td><td class="good">idx_question_covering</td><td>829</td><td class="muted">NULL</td>
+            <td class="num good">10</td><td class="num">100.00</td><td class="good">Using where; Using index</td>
+          </tr>
+          <tr><td>2</td><td class="warn">DEPENDENT SUBQUERY</td><td>q2</td><td>eq_ref</td><td>PRIMARY, ft_idx_question_search</td><td>PRIMARY</td><td>8</td><td>func</td><td class="num">1</td><td class="num">11.11</td><td>Using where</td></tr>
+          <tr><td>3</td><td class="warn">DEPENDENT UNION</td><td>q3</td><td>eq_ref</td><td>PRIMARY, FKpllt6xnsb7fel85utr6xsa2nq</td><td>PRIMARY</td><td>8</td><td>func</td><td class="num">1</td><td class="num">100.00</td><td>Using where</td></tr>
+          <tr><td>3</td><td class="warn">DEPENDENT UNION</td><td>u1</td><td>eq_ref</td><td>PRIMARY</td><td>PRIMARY</td><td>8</td><td>sbb_db.q3.AUTHOR_ID</td><td class="num">1</td><td class="num">11.11</td><td>Using where</td></tr>
+          <tr><td>4</td><td class="warn">DEPENDENT UNION</td><td>a</td><td>ref</td><td>FKnhbd8h3mtha816xvkly4ge902, FKl49sk30wrfoteigkl5w76dqhy</td><td>FKl49sk30wrfoteigkl5w76dqhy</td><td>9</td><td>func</td><td class="num">11</td><td class="num">100.00</td><td>Using where</td></tr>
+          <tr><td>4</td><td class="warn">DEPENDENT UNION</td><td>u2</td><td>eq_ref</td><td>PRIMARY</td><td>PRIMARY</td><td>8</td><td>sbb_db.a.AUTHOR_ID</td><td class="num">1</td><td class="num">11.11</td><td>Using where</td></tr>
+          <tr><td>5</td><td>UNION RESULT</td><td>&lt;union2,3,4&gt;</td><td>ALL</td><td class="muted">NULL</td><td class="muted">NULL</td><td class="muted">NULL</td><td class="muted">NULL</td><td class="num muted">NULL</td><td class="num muted">NULL</td><td class="warn">Using temporary</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="arrow">→ 풀스캔 <b>9,925행 → 10행</b>. 단 서브쿼리가 <b>DEPENDENT</b>로 남아 재실행 비용 존재</p>
+  </section>
+
+  <!-- b-2 -->
+  <section>
+    <span class="chip blue">(b-2) 1차 개선</span>
+    <h2>UNION — count 쿼리 <span style="font-weight:400;color:var(--gray);font-size:14px">· 8/8 반영분</span></h2>
+    <p class="sub">
+      (a-2)와 대응되는 count 쿼리입니다. <code>DERIVED</code>로 한 번만 계산되고,
+      <b>FULLTEXT 인덱스가 실제로 선택</b>되었습니다(<code>type: fulltext</code>).
+      이 지점이 전체 개선의 핵심입니다.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>id</th><th>select_type</th><th>table</th><th>type</th><th>possible_keys</th><th>key</th><th>key_len</th><th>ref</th><th class="num">rows</th><th class="num">filtered</th><th>Extra</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>PRIMARY</td><td>&lt;derived2&gt;</td><td>ALL</td><td class="muted">NULL</td><td class="muted">NULL</td><td class="muted">NULL</td><td class="muted">NULL</td><td class="num">13,916</td><td class="num">100.00</td><td class="muted">NULL</td></tr>
+          <tr>
+            <td>2</td><td>DERIVED</td><td>q2</td>
+            <td class="good">fulltext</td><td class="good">ft_idx_question_search</td><td class="good">ft_idx_question_search</td><td>0</td><td>const</td>
+            <td class="num good">1</td><td class="num">100.00</td><td>Using where; Ft_hints: no_ranking</td>
+          </tr>
+          <tr><td>3</td><td>UNION</td><td>u1</td><td class="good">index</td><td>PRIMARY</td><td>UKe3k3uaygor3kxwntpd8tgxmc4</td><td>1023</td><td class="muted">NULL</td><td class="num">1,000</td><td class="num">11.11</td><td class="good">Using where; Using index</td></tr>
+          <tr><td>3</td><td>UNION</td><td>q3</td><td>ref</td><td>FKpllt6xnsb7fel85utr6xsa2nq</td><td>FKpllt6xnsb7fel85utr6xsa2nq</td><td>9</td><td>sbb_db.u1.ID</td><td class="num">9</td><td class="num">100.00</td><td class="good">Using index</td></tr>
+          <tr><td>4</td><td>UNION</td><td>u2</td><td class="good">index</td><td>PRIMARY</td><td>UKe3k3uaygor3kxwntpd8tgxmc4</td><td>1023</td><td class="muted">NULL</td><td class="num">1,000</td><td class="num">11.11</td><td class="good">Using where; Using index</td></tr>
+          <tr><td>4</td><td>UNION</td><td>a</td><td>ref</td><td>FKnhbd8h3mtha816xvkly4ge902</td><td>FKnhbd8h3mtha816xvkly4ge902</td><td>9</td><td>sbb_db.u2.ID</td><td class="num">115</td><td class="num">100.00</td><td class="muted">NULL</td></tr>
+          <tr><td>5</td><td>UNION RESULT</td><td>&lt;union2,3,4&gt;</td><td>ALL</td><td class="muted">NULL</td><td class="muted">NULL</td><td class="muted">NULL</td><td class="muted">NULL</td><td class="num muted">NULL</td><td class="num muted">NULL</td><td class="warn">Using temporary</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="arrow">→ <code>type: ALL</code> → <b>fulltext</b>. 만들어 둔 FULLTEXT 인덱스를 옵티마이저가 <b>드디어 선택</b></p>
+  </section>
+
+  <!-- c-1 -->
+  <section>
+    <span class="chip blue">(c-1) AFTER</span>
+    <h2>UNION + JOIN — 목록 쿼리</h2>
+    <p class="sub">
+      <code>IN</code> 서브쿼리를 <b>JOIN</b>으로 바꾼 최종 형태입니다.
+      (b-1)에 남아 있던 <code>DEPENDENT SUBQUERY</code>가 사라지고
+      <code>DERIVED</code> + <code>eq_ref</code>로 정리되어, 서브쿼리 재실행이 제거되었습니다.
+      QUESTION은 <b>커버링 인덱스만으로 10행</b>을 읽습니다.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>id</th><th>select_type</th><th>table</th><th>type</th><th>possible_keys</th><th>key</th><th>key_len</th><th>ref</th><th class="num">rows</th><th class="num">filtered</th><th>Extra</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td><td>PRIMARY</td><td>q</td>
+            <td class="good">index</td><td>PRIMARY</td><td class="good">idx_question_covering</td><td>829</td><td class="muted">NULL</td>
+            <td class="num good">10</td><td class="num">100.00</td><td class="good">Using index</td>
+          </tr>
+          <tr><td>1</td><td>PRIMARY</td><td>&lt;derived2&gt;</td><td class="good">eq_ref</td><td>&lt;auto_distinct_key&gt;</td><td>&lt;auto_distinct_key&gt;</td><td>9</td><td>sbb_db.q.ID</td><td class="num good">1</td><td class="num">100.00</td><td class="good">Using index</td></tr>
+          <tr>
+            <td>2</td><td>DERIVED</td><td>q2</td>
+            <td class="good">fulltext</td><td class="good">ft_idx_question_search</td><td class="good">ft_idx_question_search</td><td>0</td><td>const</td>
+            <td class="num good">1</td><td class="num">100.00</td><td>Using where; Ft_hints: no_ranking</td>
+          </tr>
+          <tr><td>3</td><td>UNION</td><td>u1</td><td class="good">index</td><td>PRIMARY</td><td>UKe3k3uaygor3kxwntpd8tgxmc4</td><td>1023</td><td class="muted">NULL</td><td class="num">1,000</td><td class="num">11.11</td><td class="good">Using where; Using index</td></tr>
+          <tr><td>3</td><td>UNION</td><td>q3</td><td>ref</td><td>FKpllt6xnsb7fel85utr6xsa2nq</td><td>FKpllt6xnsb7fel85utr6xsa2nq</td><td>9</td><td>sbb_db.u1.ID</td><td class="num">9</td><td class="num">100.00</td><td class="good">Using index</td></tr>
+          <tr><td>4</td><td>UNION</td><td>u2</td><td class="good">index</td><td>PRIMARY</td><td>UKe3k3uaygor3kxwntpd8tgxmc4</td><td>1023</td><td class="muted">NULL</td><td class="num">1,000</td><td class="num">11.11</td><td class="good">Using where; Using index</td></tr>
+          <tr><td>4</td><td>UNION</td><td>a</td><td>ref</td><td>FKnhbd8h3mtha816xvkly4ge902</td><td>FKnhbd8h3mtha816xvkly4ge902</td><td>9</td><td>sbb_db.u2.ID</td><td class="num">115</td><td class="num">100.00</td><td class="muted">NULL</td></tr>
+          <tr><td>5</td><td>UNION RESULT</td><td>&lt;union2,3,4&gt;</td><td>ALL</td><td class="muted">NULL</td><td class="muted">NULL</td><td class="muted">NULL</td><td class="muted">NULL</td><td class="num muted">NULL</td><td class="num muted">NULL</td><td class="warn">Using temporary</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="arrow">→ <b>DEPENDENT SUBQUERY 제거</b>. 커버링 인덱스로 10행 + FULLTEXT 인덱스 적중</p>
+  </section>
+
+  <!-- 동일성 -->
+  <section>
+    <span class="chip">검증</span>
+    <h2>결과 집합 동일성</h2>
+    <p class="sub">
+      성능 개선이 <b>결과를 바꾸지 않았음</b>을 확인한 검증입니다.
+      세 쿼리가 같은 건수를 반환해야 최적화가 정당합니다.
+    </p>
+    <div class="cards">
+      <div class="card"><div class="k">(a) 원본 OR</div><div class="v">1,475</div></div>
+      <div class="card"><div class="k">(b) UNION + IN</div><div class="v">1,475</div></div>
+      <div class="card"><div class="k">(c) UNION + JOIN</div><div class="v b">1,475</div></div>
+    </div>
+    <p class="arrow">→ 세 방식 모두 <b>1,475건 일치</b>. 실행계획만 달라지고 결과는 동일</p>
+  </section>
+
+  <!-- 종합 -->
+  <section>
+    <span class="chip blue">종합</span>
+    <h2>무엇이 바뀌었나</h2>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>항목</th><th>(a) 원본 OR</th><th>(c) UNION + JOIN</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>QUESTION 접근 방식</td><td class="bad">ALL (풀스캔)</td><td class="good">index (커버링)</td></tr>
+          <tr><td>QUESTION 스캔 행 수</td><td class="bad">9,925</td><td class="good">10</td></tr>
+          <tr><td>possible_keys</td><td class="bad">NULL</td><td class="good">PRIMARY / FULLTEXT</td></tr>
+          <tr><td>FULLTEXT 인덱스 사용</td><td class="bad">미사용</td><td class="good">ft_idx_question_search 적중</td></tr>
+          <tr><td>서브쿼리 재실행</td><td>해당 없음</td><td class="good">DERIVED 1회 (b-1의 DEPENDENT 제거)</td></tr>
+          <tr><td>결과 건수</td><td>1,475</td><td>1,475</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="arrow">→ 인덱스를 <b>만드는 것</b>과 옵티마이저가 <b>선택하게 만드는 것</b>은 다른 작업이었음</p>
+  </section>
+
+  <footer>
+    원본 실행계획 <code>results/explain_index_miss.txt</code> ·
+    측정 SQL <code>load-test/explain-index-miss.sql</code> ·
+    MySQL 8.x <code>EXPLAIN</code> 출력을 가독성 목적으로 재구성했으며 수치는 원본과 동일합니다.
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+kw               page  A        B        verdict
+(empty)          0     609b9b9b 609b9b9b OK
+(empty)          1     87b8473e 87b8473e OK
+(empty)          2     2a388641 2a388641 OK
+자바           0     486618ff 486618ff OK
+스프링        0     0db58498 0db58498 OK
+JPA              0     3d084a66 3d084a66 OK
+쿼리           0     fdffa532 fdffa532 OK
+오류           0     86ccf315 86ccf315 OK
+성능           0     c00a68d9 c00a68d9 OK
+테스트        0     205da779 205da779 OK
+질문           0     7e6f5d1c 7e6f5d1c OK
+zzzznotfound     0     3a3fe0f3 3a3fe0f3 OK
+user1            0     759f6da0 759f6da0 OK
+자바           1     e3ad77c7 e3ad77c7 OK
+자바           5     67118cfc 67118cfc OK
+
+전 케이스 응답 동일 (15건). 성능 비교로 진행 가능.
